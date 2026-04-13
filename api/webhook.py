@@ -29,8 +29,13 @@ async def setup_bot():
     Initialises the database tables and builds the bot Application with all
     command and message handlers registered. Returns the ready Application.
     """
-    # Ensure both 'users' and 'queries' tables exist before handling any update
-    create_tables()
+    # Ensure both 'users' and 'queries' tables exist before handling any update.
+    # If the DB is unreachable the bot still starts — DB features will silently
+    # no-op until the connection is restored.
+    try:
+        create_tables()
+    except Exception:
+        print("⚠️ Warning: Could not connect to database. Bot will run without DB features.")
 
     # Build the Application — this is the central object for python-telegram-bot v20+
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()

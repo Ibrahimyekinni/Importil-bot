@@ -9,8 +9,8 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 # Neon PostgreSQL connection string — used by db_service to connect to the database
 NEON_DATABASE_URL = os.getenv("NEON_DATABASE_URL")
 
-# Google Gemini API key — used by ai_service to analyse images and generate compliance reports
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# Groq API key — used by ai_service to run LLaMA text and vision models via Groq
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # Google Drive folder ID — used by drive_service to upload and store document files
 GOOGLE_DRIVE_FOLDER_ID = os.getenv("GOOGLE_DRIVE_FOLDER_ID")

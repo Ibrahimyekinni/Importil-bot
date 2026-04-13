@@ -129,7 +129,7 @@ def read_file(file_id, mime_type):
         return ""
 
 
-# MIME types treated as images — downloaded by Gemini Vision rather than parsed as text
+# MIME types treated as images — passed to AI vision rather than parsed as text
 IMAGE_MIME_TYPES = {
     "image/jpeg",
     "image/jpg",
@@ -137,20 +137,29 @@ IMAGE_MIME_TYPES = {
     "image/webp",
 }
 
+# Module-level cache — populated on first fetch, reused on every subsequent call.
+# Call refresh_cache() to force a re-fetch after documents are updated in Drive.
+_cache = {"text": None, "image_ids": None}
+
 
 def get_all_documents_text():
     """
-    Fetches every file in the Drive folder and builds two things:
+    Returns all compliance document text and image file IDs from the Drive folder.
 
-    1. combined_text  — all readable document content joined into one string,
-                        with a placeholder line inserted for each image file so
-                        the AI knows an image exists at that position.
-    2. image_file_ids — list of Drive file IDs for image files, returned
-                        separately so they can be passed to Gemini Vision.
+    On the first call the documents are fetched from Drive and stored in the
+    module-level _cache. Every subsequent call returns the cached copy instantly
+    without hitting the Drive API again.
 
     Returns:
         (combined_text: str, image_file_ids: list[str])
     """
+    # Return cached result if available
+    if _cache["text"] is not None:
+        print("[drive_service] Using cached documents.")
+        return _cache["text"], _cache["image_ids"]
+
+    print("[drive_service] Fetching fresh documents from Drive...")
+
     files = list_files()
 
     if not files:
@@ -167,7 +176,7 @@ def get_all_documents_text():
         print(f"[drive_service] Reading: {file_name} ({mime_type})")
 
         if mime_type in IMAGE_MIME_TYPES:
-            # Queue the image for Gemini Vision and insert a placeholder in the text
+            # Queue the image for AI vision and insert a placeholder in the text
             image_file_ids.append(file_id)
             sections.append(
                 f"=== [IMAGE FILE: {file_name}] === "
@@ -184,4 +193,24 @@ def get_all_documents_text():
             print(f"[drive_service] Skipping {file_name} — no text extracted.")
 
     combined_text = "\n\n".join(sections)
+
+    # Store in cache for all future calls
+    _cache["text"] = combined_text
+    _cache["image_ids"] = image_file_ids
+
     return combined_text, image_file_ids
+
+
+def refresh_cache():
+    """
+    Clears the document cache and immediately re-fetches all files from Drive.
+    Call this after Dekel updates any compliance documents in the Drive folder
+    so the bot picks up the changes without needing a restart.
+
+    Returns:
+        (combined_text: str, image_file_ids: list[str])
+    """
+    print("[drive_service] Refreshing document cache...")
+    _cache["text"] = None
+    _cache["image_ids"] = None
+    return get_all_documents_text()
