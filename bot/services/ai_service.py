@@ -44,13 +44,23 @@ STRICT LANGUAGE RULES - NEVER VIOLATE THESE:
 - NEVER say 'I cannot determine' or 'I don't have enough information'
 - If you don't have specific data on a product, say: 'Specific certification data for this product is not in our current database. Based on its product category and typical specifications:' then give your best verdict
 - You speak as an expert who KNOWS Israeli regulations, not as someone reading documents
-- Be decisive and confident in every verdict"""
+- Be decisive and confident in every verdict
+
+CONDITIONAL VERDICT RULE:
+When you give a CONDITIONAL verdict, you MUST end your response with a clearly marked follow-up section like this:
+
+*❓ To give you a more precise verdict, I need a few more details:*
+1. [specific question about frequency, MHz, power output, etc.]
+2. [specific question about certification or intended use]
+3. [any other relevant question]
+
+*Reply with these details and I'll give you a final definitive verdict.*
+
+Make the questions very specific and technical — you're talking to importers who know their products."""
 
 
 def get_client():
-    """
-    Creates and returns an authenticated Groq client using GROQ_API_KEY.
-    """
+    """Creates and returns an authenticated Groq client using GROQ_API_KEY."""
     return Groq(api_key=GROQ_API_KEY)
 
 
@@ -62,8 +72,6 @@ def get_compliance_context():
     gracefully rather than crashing.
     """
     try:
-        # get_all_documents_text returns (combined_text, image_file_ids)
-        # We only need the text portion here
         combined_text, _ = get_all_documents_text()
         return combined_text
     except Exception as e:
@@ -71,13 +79,29 @@ def get_compliance_context():
         return ""
 
 
-def analyze_text_query(product_description):
+def _build_history_block(conversation_history):
+    """
+    Converts a list of {'role': 'user'|'assistant', 'content': str} dicts into
+    a readable previous-conversation block to inject into the prompt.
+    Returns an empty string if there is no history.
+    """
+    if not conversation_history:
+        return ""
+
+    lines = ["Previous conversation:"]
+    for turn in conversation_history:
+        speaker = "User" if turn["role"] == "user" else "Importil"
+        lines.append(f"{speaker}: {turn['content']}")
+    return "\n".join(lines)
+
+
+def analyze_text_query(product_description, conversation_history=None):
     """
     Analyses a text-based product query against Israeli customs compliance rules.
 
-    Uses llama-3.3-70b-versatile via the Groq chat completions API.
-    The system message carries the persona; the user message carries the
-    compliance documents and the product query combined.
+    conversation_history — optional list of previous {'role', 'content'} dicts.
+    When provided the full history is injected above the current query so the
+    model understands this is a follow-up exchange.
 
     Returns the formatted verdict string, or a friendly error message on failure.
     """
@@ -91,10 +115,16 @@ def analyze_text_query(product_description):
             else "No compliance documents available. Use your general knowledge and note this limitation."
         )
 
+        history_block = _build_history_block(conversation_history)
+
         user_message = f"""--- COMPLIANCE DOCUMENTS ---
 {context_block}
 --- END OF DOCUMENTS ---
-
+{f'''
+--- PREVIOUS CONVERSATION ---
+{history_block}
+--- END OF PREVIOUS CONVERSATION ---
+''' if history_block else ''}
 USER QUERY:
 The user wants to import the following product into Israel:
 "{product_description}"
@@ -129,12 +159,6 @@ def analyze_image_query(image_bytes, additional_text=""):
     Analyses a product image against Israeli customs compliance rules using
     Groq's vision model (llama-3.2-90b-vision-preview).
 
-    Steps:
-      1. Encodes image_bytes as a base64 data URL
-      2. Loads compliance documents as text context
-      3. Sends both to Groq using the vision messages format
-      4. Returns the formatted verdict string
-
     additional_text — optional caption the user sent alongside the photo.
 
     Returns the formatted verdict string, or a friendly error message on failure.
@@ -143,8 +167,7 @@ def analyze_image_query(image_bytes, additional_text=""):
         client  = get_client()
         context = get_compliance_context()
 
-        # Encode raw bytes to base64 so they can be embedded in the JSON payload
-        b64_image = base64.b64encode(image_bytes).decode("utf-8")
+        b64_image      = base64.b64encode(image_bytes).decode("utf-8")
         image_data_url = f"data:image/jpeg;base64,{b64_image}"
 
         context_block = (
@@ -181,7 +204,6 @@ Please do the following in order:
    - What the user should do next
 """
 
-        # Vision messages format: content is a list containing image_url and text parts
         response = client.chat.completions.create(
             model=VISION_MODEL,
             messages=[
@@ -189,14 +211,8 @@ Please do the following in order:
                 {
                     "role": "user",
                     "content": [
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": image_data_url},
-                        },
-                        {
-                            "type": "text",
-                            "text": text_prompt,
-                        },
+                        {"type": "image_url", "image_url": {"url": image_data_url}},
+                        {"type": "text",      "text": text_prompt},
                     ],
                 },
             ]
@@ -215,7 +231,6 @@ Please do the following in order:
 def format_verdict(raw_response):
     """
     Returns the Groq response trimmed of surrounding whitespace.
-    The model is instructed to format the full response itself (including the
-    header), so no wrapper is added here to avoid duplication.
+    The model formats the full response itself including the header.
     """
     return raw_response.strip()
