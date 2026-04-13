@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Importil{% endblock %}
+
+{% block content %}
+<h1>Dashboard</h1>
+
+<!-- Stats cards -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:32px;">
+
+  <div class="card" style="border-top:3px solid #4f8ef7;">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px;">Total Users</div>
+    <div style="font-size:36px;font-weight:700;">{{ total_users }}</div>
+  </div>
+
+  <div class="card" style="border-top:3px solid #2ecc71;">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px;">Approved</div>
+    <div style="font-size:36px;font-weight:700;color:#2ecc71;">{{ approved_users }}</div>
+  </div>
+
+  <div class="card" style="border-top:3px solid #f39c12;">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px;">Pending Approval</div>
+    <div style="font-size:36px;font-weight:700;color:#f39c12;">{{ pending_users }}</div>
+  </div>
+
+  <div class="card" style="border-top:3px solid #9b59b6;">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px;">Queries Today</div>
+    <div style="font-size:36px;font-weight:700;color:#9b59b6;">{{ queries_today }}</div>
+  </div>
+
+</div>
+
+<!-- Recent activity -->
+<h2>Recent Activity</h2>
+<div class="card">
+  {% if recent_queries %}
+  <table>
+    <thead>
+      <tr>
+        <th>User ID</th>
+        <th>Type</th>
+        <th>Query</th>
+        <th>Verdict</th>
+        <th>Time</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for q in recent_queries %}
+      <tr>
+        <td class="mono">{{ q.telegram_id }}</td>
+        <td>
+          {% if q.query_type == 'photo' %}
+            <span class="badge badge-grey">📸 Photo</span>
+          {% else %}
+            <span class="badge badge-grey">💬 Text</span>
+          {% endif %}
+        </td>
+        <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ q.query_content }}">
+          {{ q.query_content[:80] }}{% if q.query_content|length > 80 %}…{% endif %}
+        </td>
+        <td>
+          {% if q.verdict == 'allowed' %}
+            <span class="badge badge-green">✅ Allowed</span>
+          {% elif q.verdict == 'rejected' %}
+            <span class="badge badge-red">❌ Rejected</span>
+          {% elif q.verdict == 'pending' %}
+            <span class="badge badge-grey">⏳ Pending</span>
+          {% else %}
+            <span class="badge badge-yellow">⚠️ Conditional</span>
+          {% endif %}
+        </td>
+        <td class="muted">
+          {% if q.timestamp %}{{ q.timestamp.strftime('%d %b %H:%M') }}{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p class="muted" style="padding:12px 0;">No queries yet.</p>
+  {% endif %}
+
+  {% if recent_queries %}
+  <div style="margin-top:16px;">
+    <a href="/history" class="btn btn-blue">View all history →</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

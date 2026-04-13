@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Importil — Login</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f1117;
+      color: #e8eaf0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-box {
+      background: #1a1d27;
+      border: 1px solid #2e3350;
+      border-radius: 12px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+
+    .title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #4f8ef7;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #8890aa;
+      margin-bottom: 36px;
+    }
+
+    input[type="password"] {
+      width: 100%;
+      background: #22263a;
+      border: 1px solid #2e3350;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #e8eaf0;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+      margin-bottom: 14px;
+    }
+
+    input[type="password"]:focus {
+      border-color: #4f8ef7;
+    }
+
+    button {
+      width: 100%;
+      background: #4f8ef7;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    button:hover { background: #3a7ae0; }
+
+    .error {
+      background: rgba(231,76,60,.12);
+      border: 1px solid rgba(231,76,60,.3);
+      color: #e74c3c;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+
+    .footer {
+      margin-top: 28px;
+      font-size: 11px;
+      color: #8890aa;
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-box">
+  <div class="logo">🛃</div>
+  <div class="title">Importil Admin</div>
+  <div class="subtitle">Drivetech360 Customs Compliance Platform</div>
+
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="error">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST" action="/login">
+    <input
+      type="password"
+      name="password"
+      placeholder="Enter admin password"
+      autofocus
+      required
+    />
+    <button type="submit">Sign In</button>
+  </form>
+
+  <div class="footer">Authorised personnel only</div>
+</div>
+
+</body>
+</html>

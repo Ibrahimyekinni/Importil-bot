@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Users — Importil{% endblock %}
+
+{% block content %}
+<h1>Users <span class="muted" style="font-size:15px;font-weight:400;">({{ users|length }} total)</span></h1>
+
+<div class="card">
+  {% if users %}
+  <table>
+    <thead>
+      <tr>
+        <th>Telegram ID</th>
+        <th>Username</th>
+        <th>Email</th>
+        <th>Status</th>
+        <th>Joined</th>
+        <th>Approved At</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td class="mono">{{ user.telegram_id }}</td>
+
+        <td>
+          {% if user.telegram_username %}
+            @{{ user.telegram_username }}
+          {% else %}
+            <span class="muted">—</span>
+          {% endif %}
+        </td>
+
+        <td>
+          {% if user.email %}
+            {{ user.email }}
+          {% else %}
+            <span class="muted">Not linked</span>
+          {% endif %}
+        </td>
+
+        <td>
+          {% if user.approved %}
+            <span class="badge badge-green">✅ Approved</span>
+          {% else %}
+            <span class="badge badge-yellow">⏳ Pending</span>
+          {% endif %}
+        </td>
+
+        <td class="muted">
+          {% if user.linked_at %}{{ user.linked_at.strftime('%d %b %Y') }}{% endif %}
+        </td>
+
+        <td class="muted">
+          {% if user.approved_at %}{{ user.approved_at.strftime('%d %b %Y') }}{% else %}—{% endif %}
+        </td>
+
+        <td>
+          {% if user.approved %}
+            <form method="POST" action="/revoke/{{ user.telegram_id }}" style="display:inline;" onsubmit="return confirm('Revoke access for @{{ user.telegram_username or user.telegram_id }}?')">
+              <button type="submit" class="btn btn-red">Revoke</button>
+            </form>
+          {% else %}
+            <form method="POST" action="/approve/{{ user.telegram_id }}" style="display:inline;">
+              <button type="submit" class="btn btn-green">Approve</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p class="muted" style="padding:12px 0;">No users registered yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

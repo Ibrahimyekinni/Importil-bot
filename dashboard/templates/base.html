@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Importil Admin{% endblock %}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1117;
+      --surface:   #1a1d27;
+      --surface2:  #22263a;
+      --border:    #2e3350;
+      --accent:    #4f8ef7;
+      --accent-h:  #3a7ae0;
+      --green:     #2ecc71;
+      --red:       #e74c3c;
+      --yellow:    #f39c12;
+      --text:      #e8eaf0;
+      --muted:     #8890aa;
+      --radius:    8px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Navbar ── */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      height: 56px;
+      gap: 32px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-brand {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+
+    .nav-brand span {
+      color: var(--muted);
+      font-weight: 400;
+      font-size: 12px;
+      margin-left: 6px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      transition: background 0.15s, color 0.15s;
+      font-weight: 500;
+    }
+
+    .nav-links a:hover,
+    .nav-links a.active {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .nav-logout a {
+      color: var(--red);
+      text-decoration: none;
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+
+    .nav-logout a:hover { background: var(--surface2); }
+
+    /* ── Main layout ── */
+    main {
+      flex: 1;
+      padding: 32px 28px;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 24px; }
+    h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    /* ── Tables ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .badge-green  { background: rgba(46,204,113,.15); color: var(--green); }
+    .badge-red    { background: rgba(231,76,60,.15);  color: var(--red); }
+    .badge-yellow { background: rgba(243,156,18,.15); color: var(--yellow); }
+    .badge-grey   { background: rgba(136,144,170,.12); color: var(--muted); }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+
+    .btn:hover { opacity: 0.85; }
+    .btn-green { background: var(--green);  color: #fff; }
+    .btn-red   { background: var(--red);    color: #fff; }
+    .btn-blue  { background: var(--accent); color: #fff; }
+
+    /* ── Flash messages ── */
+    .flash {
+      background: var(--surface2);
+      border-left: 3px solid var(--accent);
+      padding: 10px 16px;
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      font-size: 13px;
+    }
+
+    /* ── Muted / helper text ── */
+    .muted { color: var(--muted); }
+    .mono  { font-family: "SF Mono", "Fira Code", monospace; font-size: 12px; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="/">🛃 Importil <span>by Drivetech360</span></a>
+  <div class="nav-links">
+    <a href="/"        {% if request.path == '/'        %}class="active"{% endif %}>Dashboard</a>
+    <a href="/users"   {% if request.path == '/users'   %}class="active"{% endif %}>Users</a>
+    <a href="/history" {% if request.path == '/history' %}class="active"{% endif %}>History</a>
+  </div>
+  <div class="nav-logout"><a href="/logout">Logout</a></div>
+</nav>
+
+<main>
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="flash">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</main>
+
+</body>
+</html>
