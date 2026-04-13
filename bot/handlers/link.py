@@ -1,0 +1,28 @@
+from bot.services.db_service import save_user
+
+
+async def handle_link(update, context):
+    """
+    Handles the /link command.
+    Expects the user to provide their email as an argument: /link your@email.com
+    Saves or updates the email on their user record.
+    """
+    telegram_id = update.effective_user.id
+    username = update.effective_user.username or update.effective_user.first_name
+
+    # context.args contains a list of words that followed the command
+    if not context.args:
+        await update.message.reply_text(
+            "Please provide your email. Example: /link your@email.com"
+        )
+        return
+
+    # Take the first word after /link as the email address
+    email = context.args[0]
+
+    # Upsert the user record with the provided email
+    save_user(telegram_id, username, email)
+
+    await update.message.reply_text(
+        "✅ Email linked successfully! Waiting for Dekel's approval."
+    )
