@@ -1,4 +1,5 @@
 from bot.services.db_service import get_user, save_user
+from config.settings import ADMIN_TELEGRAM_ID
 
 
 async def handle_start(update, context):
@@ -36,3 +37,16 @@ async def handle_start(update, context):
             "Dekel will approve your access shortly. "
             "Use /link your@email.com to connect your email."
         )
+        # Notify the admin about the new registration
+        try:
+            await context.bot.send_message(
+                chat_id=ADMIN_TELEGRAM_ID,
+                text=(
+                    f"🆕 New importer registered!\n\n"
+                    f"Name: @{username}\n"
+                    f"Telegram ID: {telegram_id}\n\n"
+                    "Go to the dashboard to approve or reject them."
+                )
+            )
+        except Exception as e:
+            print(f"[start] Failed to notify admin of new user: {e}")

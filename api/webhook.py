@@ -20,6 +20,7 @@ from bot.handlers.start import handle_start
 from bot.handlers.help import handle_help
 from bot.handlers.link import handle_link
 from bot.handlers.check import handle_check
+from bot.handlers.refresh import handle_refresh
 from bot.services.db_service import create_tables
 from config.settings import TELEGRAM_BOT_TOKEN
 
@@ -48,6 +49,9 @@ async def setup_bot():
 
     # /link — connect an email address to the user's account
     application.add_handler(CommandHandler("link", handle_link))
+
+    # /refresh — admin-only: clears and re-fetches the Drive document cache
+    application.add_handler(CommandHandler("refresh", handle_refresh))
 
     # Photo messages — routed to handle_check for compliance analysis
     application.add_handler(MessageHandler(filters.PHOTO, handle_check))
