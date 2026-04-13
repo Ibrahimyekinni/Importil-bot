@@ -1,5 +1,6 @@
 import base64
 import io
+import traceback
 
 from groq import Groq
 
@@ -7,7 +8,7 @@ from config.settings import GROQ_API_KEY
 from bot.services.drive_service import get_all_documents_text
 
 TEXT_MODEL   = "llama-3.3-70b-versatile"
-VISION_MODEL = "llama-3.2-90b-vision-preview"
+VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 # System prompt that defines Importil's persona and behaviour for every query
 SYSTEM_PROMPT = """You are Importil, an AI customs compliance officer with deep expertise in Israeli telecommunications and radio frequency regulations. You have memorized all Israeli Ministry of Communications regulations, the Israeli Standard for Radio Equipment (SI 461), the Bezeq regulations, EU CE-RED directives as they apply to Israel, and all frequency band restrictions for Israel (433MHz, 868MHz, 915MHz, 2.4GHz, 5GHz bands and their restrictions).
@@ -167,6 +168,9 @@ def analyze_image_query(image_bytes, additional_text=""):
         client  = get_client()
         context = get_compliance_context()
 
+        # Ensure image_bytes is raw bytes before encoding
+        if hasattr(image_bytes, "read"):
+            image_bytes = image_bytes.read()
         b64_image      = base64.b64encode(image_bytes).decode("utf-8")
         image_data_url = f"data:image/jpeg;base64,{b64_image}"
 
@@ -221,7 +225,8 @@ Please do the following in order:
         return format_verdict(response.choices[0].message.content)
 
     except Exception as e:
-        print(f"[ai_service] Error in analyze_image_query: {e}")
+        print(f"[ai_service] Error in analyze_image_query: {type(e).__name__}: {e}")
+        traceback.print_exc()
         return (
             "⚠️ Sorry, I couldn't analyse the image right now. "
             "Please try again or send the product name as text instead."
