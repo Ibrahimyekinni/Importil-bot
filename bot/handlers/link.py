@@ -1,4 +1,5 @@
-from bot.services.db_service import save_user
+from bot.services.db_service import save_user, get_user_language
+from bot.utils.messages import get_message
 
 
 async def handle_link(update, context):
@@ -8,21 +9,14 @@ async def handle_link(update, context):
     Saves or updates the email on their user record.
     """
     telegram_id = update.effective_user.id
-    username = update.effective_user.username or update.effective_user.first_name
+    username    = update.effective_user.username or update.effective_user.first_name
+    language    = get_user_language(telegram_id)
 
-    # context.args contains a list of words that followed the command
     if not context.args:
-        await update.message.reply_text(
-            "Please provide your email. Example: /link your@email.com"
-        )
+        await update.message.reply_text(get_message('link_usage', language))
         return
 
-    # Take the first word after /link as the email address
     email = context.args[0]
-
-    # Upsert the user record with the provided email
     save_user(telegram_id, username, email)
 
-    await update.message.reply_text(
-        "✅ Email linked successfully! Waiting for Dekel's approval."
-    )
+    await update.message.reply_text(get_message('link_success', language))

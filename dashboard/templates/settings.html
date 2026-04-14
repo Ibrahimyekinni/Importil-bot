@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Settings — Importil Admin{% endblock %}
+
+{% block content %}
+<h1>Settings</h1>
+
+<div class="card" style="max-width: 480px;">
+  <h2>Admin Language</h2>
+  <p class="muted" style="margin-bottom: 20px; line-height: 1.5;">
+    Choose the language Importil uses when sending bot messages to your Telegram account.
+  </p>
+
+  <form method="POST" action="/settings/language">
+    <div style="margin-bottom: 20px;">
+      <label style="display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+        Preferred Language
+      </label>
+      <select name="language" style="
+        width: 100%;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--text);
+        font-size: 14px;
+        padding: 10px 12px;
+        outline: none;
+        cursor: pointer;
+      ">
+        <option value="en" {% if current_language == 'en' %}selected{% endif %}>English 🇬🇧</option>
+        <option value="he" {% if current_language == 'he' %}selected{% endif %}>עברית 🇮🇱</option>
+      </select>
+    </div>
+
+    <button type="submit" class="btn btn-blue">Save Language</button>
+  </form>
+</div>
+{% endblock %}

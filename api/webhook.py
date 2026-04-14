@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from telegram import Update
 from telegram.ext import (
     Application,
+    CallbackQueryHandler,
     CommandHandler,
     MessageHandler,
     filters,
@@ -21,6 +22,7 @@ from bot.handlers.help import handle_help
 from bot.handlers.link import handle_link
 from bot.handlers.check import handle_check
 from bot.handlers.refresh import handle_refresh
+from bot.handlers.language import handle_language_command, handle_language_callback
 from bot.services.db_service import create_tables
 from config.settings import TELEGRAM_BOT_TOKEN
 
@@ -50,8 +52,14 @@ async def setup_bot():
     # /link — connect an email address to the user's account
     application.add_handler(CommandHandler("link", handle_link))
 
+    # /language — show language picker
+    application.add_handler(CommandHandler("language", handle_language_command))
+
     # /refresh — admin-only: clears and re-fetches the Drive document cache
     application.add_handler(CommandHandler("refresh", handle_refresh))
+
+    # Inline keyboard callbacks for language selection (lang_en / lang_he)
+    application.add_handler(CallbackQueryHandler(handle_language_callback, pattern="^lang_"))
 
     # Photo messages — routed to handle_check for compliance analysis
     application.add_handler(MessageHandler(filters.PHOTO, handle_check))

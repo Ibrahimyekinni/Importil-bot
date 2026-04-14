@@ -1,8 +1,9 @@
 import asyncio
 import traceback
 
-from bot.services.db_service import is_approved, save_query
+from bot.services.db_service import is_approved, save_query, get_user_language
 from bot.services.ai_service import analyze_text_query, analyze_image_query
+from bot.utils.messages import get_message
 
 # Per-user conversation history for CONDITIONAL follow-ups.
 # Structure: { telegram_id: [{"role": "user"|"assistant", "content": str}, ...] }
@@ -56,19 +57,23 @@ async def handle_check(update, context):
     """
     telegram_id = update.effective_user.id
     chat_id     = update.effective_chat.id
+    language    = get_user_language(telegram_id)
 
     # Block unapproved users before doing anything else
     if not is_approved(telegram_id):
-        await update.message.reply_text(
-            "⛔ You don't have access yet. Please wait for approval."
-        )
+        await update.message.reply_text(get_message('no_access', language))
         return
+
+    # Suffix injected into the AI system prompt to steer response language
+    lang_instruction = (
+        "Respond in Hebrew (עברית)." if language == "he" else "Respond in English."
+    )
 
     if update.message.photo:
         # ── Photo query ──────────────────────────────────────────────────────
         # Photos always trigger a fresh analysis — no conversation threading
 
-        await update.message.reply_text("📸 Analyzing image... please wait")
+        await update.message.reply_text(get_message('analyzing_image', language))
 
         photo          = update.message.photo[-1]
         query_content  = f"photo:{photo.file_id}"
@@ -81,24 +86,26 @@ async def handle_check(update, context):
             file        = await context.bot.get_file(photo.file_id)
             image_bytes = bytes(await file.download_as_bytearray())
 
-            response = analyze_image_query(image_bytes, additional_text=additional_text)
-            verdict  = extract_verdict(response)
+            response = analyze_image_query(
+                image_bytes,
+                additional_text=additional_text,
+                lang_instruction=lang_instruction,
+            )
+            verdict = extract_verdict(response)
 
             save_query(
                 telegram_id=telegram_id,
                 query_type="photo",
                 query_content=query_content,
                 verdict=verdict,
-                full_response=response
+                full_response=response,
             )
 
             await update.message.reply_text(response, parse_mode="Markdown")
 
         except Exception:
             traceback.print_exc()
-            await update.message.reply_text(
-                "⚠️ Something went wrong while analyzing. Please try again in a moment."
-            )
+            await update.message.reply_text(get_message('image_error', language))
 
         finally:
             stop_event.set()
@@ -113,28 +120,27 @@ async def handle_check(update, context):
         history = user_context.get(telegram_id)
 
         if history:
-            await update.message.reply_text(
-                "🔄 Processing your follow-up... please wait"
-            )
+            await update.message.reply_text(get_message('analyzing_followup', language))
         else:
-            await update.message.reply_text(
-                "🔍 Analyzing product compliance... please wait"
-            )
+            await update.message.reply_text(get_message('analyzing_text', language))
 
         stop_event  = asyncio.Event()
         typing_task = asyncio.create_task(keep_typing(context.bot, chat_id, stop_event))
 
         try:
-            # Pass the conversation history (may be None for a fresh query)
-            response = analyze_text_query(query_content, conversation_history=history)
-            verdict  = extract_verdict(response)
+            response = analyze_text_query(
+                query_content,
+                conversation_history=history,
+                lang_instruction=lang_instruction,
+            )
+            verdict = extract_verdict(response)
 
             save_query(
                 telegram_id=telegram_id,
                 query_type="text",
                 query_content=query_content,
                 verdict=verdict,
-                full_response=response
+                full_response=response,
             )
 
             await update.message.reply_text(response, parse_mode="Markdown")
@@ -159,9 +165,7 @@ async def handle_check(update, context):
 
         except Exception:
             traceback.print_exc()
-            await update.message.reply_text(
-                "⚠️ Something went wrong while analyzing. Please try again in a moment."
-            )
+            await update.message.reply_text(get_message('error', language))
 
         finally:
             stop_event.set()

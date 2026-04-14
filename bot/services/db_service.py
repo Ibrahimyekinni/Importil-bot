@@ -36,8 +36,14 @@ def create_tables():
                     email            VARCHAR(255),
                     approved         BOOLEAN DEFAULT FALSE,
                     linked_at        TIMESTAMP DEFAULT NOW(),
-                    approved_at      TIMESTAMP
+                    approved_at      TIMESTAMP,
+                    language         VARCHAR(5) DEFAULT 'en'
                 );
+            """)
+            # Add language column to existing tables that pre-date this migration
+            cur.execute("""
+                ALTER TABLE users
+                ADD COLUMN IF NOT EXISTS language VARCHAR(5) DEFAULT 'en';
             """)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS queries (
@@ -201,3 +207,33 @@ def revoke_user(telegram_id):
                 WHERE telegram_id = %s;
             """, (telegram_id,))
         conn.commit()
+
+
+def update_user_language(telegram_id, language):
+    """
+    Sets the preferred language ('en' or 'he') for a user.
+    Does nothing if the database is unreachable.
+    """
+    conn = get_connection()
+    if conn is None:
+        return
+
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE users
+                SET language = %s
+                WHERE telegram_id = %s;
+            """, (language, telegram_id))
+        conn.commit()
+
+
+def get_user_language(telegram_id):
+    """
+    Returns the user's preferred language ('en' or 'he').
+    Falls back to 'en' if the user is not found or the DB is unreachable.
+    """
+    user = get_user(telegram_id)
+    if user and user.get("language"):
+        return user["language"]
+    return "en"

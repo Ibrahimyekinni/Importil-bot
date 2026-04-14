@@ -21,8 +21,10 @@ from bot.services.db_service import (
     get_all_queries,
     approve_user,
     revoke_user,
+    update_user_language,
+    get_user_language,
 )
-from config.settings import FLASK_SECRET_KEY, ADMIN_PASSWORD
+from config.settings import FLASK_SECRET_KEY, ADMIN_PASSWORD, ADMIN_TELEGRAM_ID
 
 # ── App setup ────────────────────────────────────────────────────────────────
 
@@ -135,6 +137,28 @@ def history():
     """Query history page — all compliance queries newest first."""
     all_queries = get_all_queries() or []
     return render_template("history.html", queries=all_queries)
+
+
+@app.route("/settings", methods=["GET"])
+@require_login
+def settings():
+    """Settings page — lets Dekel change his own language preference."""
+    current_language = get_user_language(ADMIN_TELEGRAM_ID)
+    return render_template("settings.html", current_language=current_language)
+
+
+@app.route("/settings/language", methods=["POST"])
+@require_login
+def settings_language():
+    """Update Dekel's preferred language in the database."""
+    language = request.form.get("language", "en")
+    if language not in ("en", "he"):
+        flash("Invalid language selection.")
+        return redirect(url_for("settings"))
+    update_user_language(ADMIN_TELEGRAM_ID, language)
+    label = "English" if language == "en" else "Hebrew (עברית)"
+    flash(f"Language updated to {label}.")
+    return redirect(url_for("settings"))
 
 
 # ── Vercel / local entry point ───────────────────────────────────────────────

@@ -143,13 +143,15 @@ def _build_history_block(conversation_history):
     return "\n".join(lines)
 
 
-def analyze_text_query(product_description, conversation_history=None):
+def analyze_text_query(product_description, conversation_history=None, lang_instruction=""):
     """
     Analyses a text-based product query against Israeli customs compliance rules.
 
     conversation_history — optional list of previous {'role', 'content'} dicts.
     When provided the full history is injected above the current query so the
     model understands this is a follow-up exchange.
+
+    lang_instruction — e.g. "Respond in Hebrew (עברית)." appended to the prompt.
 
     Returns the formatted verdict string, or a friendly error message on failure.
     """
@@ -182,7 +184,7 @@ Please provide:
 2. The specific reason based on the documents above
 3. Which regulation or list applies
 4. What the user should do next
-"""
+{lang_instruction}"""
 
         response = client.chat.completions.create(
             model=TEXT_MODEL,
@@ -202,12 +204,13 @@ Please provide:
         )
 
 
-def analyze_image_query(image_bytes, additional_text=""):
+def analyze_image_query(image_bytes, additional_text="", lang_instruction=""):
     """
     Analyses a product image against Israeli customs compliance rules using
     Groq's vision model (llama-3.2-90b-vision-preview).
 
-    additional_text — optional caption the user sent alongside the photo.
+    additional_text   — optional caption the user sent alongside the photo.
+    lang_instruction  — e.g. "Respond in Hebrew (עברית)." appended to the prompt.
 
     Returns the formatted verdict string, or a friendly error message on failure.
     """
@@ -253,7 +256,7 @@ Please do the following in order:
    - Specific reason based on the documents
    - Which regulation or list applies
    - What the user should do next
-"""
+{lang_instruction}"""
 
         response = client.chat.completions.create(
             model=VISION_MODEL,

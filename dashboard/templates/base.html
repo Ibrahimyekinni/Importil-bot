@@ -194,9 +194,10 @@
 <nav>
   <a class="nav-brand" href="/">🛃 Importil <span>by Drivetech360</span></a>
   <div class="nav-links">
-    <a href="/"        {% if request.path == '/'        %}class="active"{% endif %}>Dashboard</a>
-    <a href="/users"   {% if request.path == '/users'   %}class="active"{% endif %}>Users</a>
-    <a href="/history" {% if request.path == '/history' %}class="active"{% endif %}>History</a>
+    <a href="/"         {% if request.path == '/'         %}class="active"{% endif %}>Dashboard</a>
+    <a href="/users"    {% if request.path == '/users'    %}class="active"{% endif %}>Users</a>
+    <a href="/history"  {% if request.path == '/history'  %}class="active"{% endif %}>History</a>
+    <a href="/settings" {% if request.path == '/settings' %}class="active"{% endif %}>Settings</a>
   </div>
   <div class="nav-logout"><a href="/logout">Logout</a></div>
 </nav>
