@@ -110,6 +110,24 @@ def fetch_via_firecrawl(url):
 
 # ── Orchestrator: try meta first, Firecrawl as fallback ───────────────────────
 
+# Phrases that indicate Firecrawl got a login wall, redirect page, or generic
+# site shell instead of actual product content.
+_JUNK_PHRASES = [
+    "I'm shopping for",
+    "Sign in",
+    "Shopping for",
+    "Smarter Shopping",
+    "Back to top",
+    "Customer Service",
+    "All Categories",
+]
+
+
+def _is_junk_content(text):
+    """Returns True if the text looks like a login wall or generic site page."""
+    return any(phrase.lower() in text.lower() for phrase in _JUNK_PHRASES)
+
+
 def fetch_product_content(url):
     """
     Two-step content extraction strategy:
@@ -120,10 +138,11 @@ def fetch_product_content(url):
       2. fetch_via_firecrawl() — full-page scrape via Firecrawl API.
                               Slower, uses API credits, but handles
                               JS-heavy or auth-walled pages better.
+                              Result is discarded if it looks like a
+                              login wall or generic site shell.
 
-    Returns the first result with >= 30 characters (matching the guard in
-    check.py), or None if both strategies fail. Never returns a fabricated
-    fallback string — only real content or None.
+    Returns the first result with >= 30 characters and real product
+    content, or None if both strategies fail or return junk.
     """
     meta = fetch_page_meta(url)
     if meta and len(meta.strip()) >= 30:
@@ -132,6 +151,10 @@ def fetch_product_content(url):
 
     print(f"[url_check] Meta insufficient ({len(meta) if meta else 0} chars), trying Firecrawl: {url}")
     result = fetch_via_firecrawl(url)
+
+    if result and _is_junk_content(result):
+        print(f"[url_check] Firecrawl returned junk/login-wall content — discarding: {url}")
+        return None
 
     if not result:
         print(f"[url_check] Both methods failed — returning None for: {url}")
