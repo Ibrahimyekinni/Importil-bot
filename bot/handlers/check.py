@@ -4,6 +4,7 @@ import traceback
 from bot.services.db_service import is_approved, save_query, get_user_language
 from bot.services.ai_service import analyze_text_query, analyze_image_query
 from bot.utils.messages import get_message
+from bot.handlers.url_check import extract_url, fetch_via_jina
 
 # Per-user conversation history for CONDITIONAL follow-ups.
 # Structure: { telegram_id: [{"role": "user"|"assistant", "content": str}, ...] }
@@ -112,9 +113,58 @@ async def handle_check(update, context):
             typing_task.cancel()
 
     elif update.message.text:
-        # ── Text query (with optional follow-up context) ─────────────────────
+        # ── Text query ───────────────────────────────────────────────────────
 
         query_content = update.message.text
+        url = extract_url(query_content)
+
+        if url:
+            # ── URL/link query ────────────────────────────────────────────────
+            # Fetch the page via Jina AI Reader, then run a normal compliance
+            # check on the extracted text. Logged as query_type='link'.
+
+            await update.message.reply_text(get_message('fetching_link', language))
+
+            stop_event  = asyncio.Event()
+            typing_task = asyncio.create_task(keep_typing(context.bot, chat_id, stop_event))
+
+            try:
+                page_text = fetch_via_jina(url)
+
+                # Build a product description the AI understands
+                product_description = (
+                    f"The following product information was fetched from this URL: {url}\n\n"
+                    f"{page_text}"
+                )
+
+                response = analyze_text_query(
+                    product_description,
+                    conversation_history=None,
+                    lang_instruction=lang_instruction,
+                )
+                verdict = extract_verdict(response)
+
+                save_query(
+                    telegram_id=telegram_id,
+                    query_type="link",
+                    query_content=url,
+                    verdict=verdict,
+                    full_response=response,
+                )
+
+                await update.message.reply_text(response, parse_mode="Markdown")
+
+            except Exception:
+                traceback.print_exc()
+                await update.message.reply_text(get_message('link_error', language))
+
+            finally:
+                stop_event.set()
+                typing_task.cancel()
+
+            return  # URL handling is always a fresh check — no conversation context
+
+        # ── Plain-text query (with optional follow-up context) ────────────────
 
         # Check if we have a pending CONDITIONAL conversation for this user
         history = user_context.get(telegram_id)
