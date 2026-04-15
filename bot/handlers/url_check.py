@@ -12,12 +12,7 @@ from config.settings import FIRECRAWL_API_KEY
 
 # ── URL detection ─────────────────────────────────────────────────────────────
 
-# Matches http:// and https:// URLs, stopping at whitespace or common
-# surrounding characters. Trailing punctuation is stripped separately.
 _URL_PATTERN = re.compile(r'https?://[^\s<>"\']+', re.IGNORECASE)
-
-# Characters that commonly appear after a URL in natural text but are
-# not part of the URL itself (e.g. "check this: https://example.com.")
 _TRAILING_PUNCT = '.,!?;:)\'\"`'
 
 
@@ -32,7 +27,55 @@ def extract_url(text):
     return match.group(0).rstrip(_TRAILING_PUNCT)
 
 
-# ── Firecrawl fetch ───────────────────────────────────────────────────────────
+# ── Step 1: lightweight meta tag extraction ───────────────────────────────────
+
+def fetch_page_meta(url):
+    """
+    Fetches the page HTML directly and extracts product-identifying meta tags:
+    og:title, og:description, <title>, and meta description.
+
+    Returns a pipe-joined string of whatever was found, or None if the request
+    fails or no meta tags are present. Never raises.
+
+    This is intentionally lightweight — no API key, no external service, fast.
+    It works well for most e-commerce product pages that embed structured meta
+    tags (AliExpress, Amazon, eBay, manufacturer sites, etc.).
+    """
+    try:
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            ),
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        response = requests.get(url, headers=headers, timeout=10)
+
+        html = response.text
+        text_parts = []
+
+        # Try both attribute orderings so we catch whichever the page uses
+        og_title  = (re.findall(r'property="og:title"\s+content="([^"]+)"', html) or
+                     re.findall(r'content="([^"]+)"\s+property="og:title"', html))
+        og_desc   = (re.findall(r'property="og:description"\s+content="([^"]+)"', html) or
+                     re.findall(r'content="([^"]+)"\s+property="og:description"', html))
+        title     = re.findall(r'<title[^>]*>([^<]+)</title>', html)
+        meta_desc = (re.findall(r'name="description"\s+content="([^"]+)"', html) or
+                     re.findall(r'content="([^"]+)"\s+name="description"', html))
+
+        for items in [og_title, title, og_desc, meta_desc]:
+            if items:
+                text_parts.append(items[0].strip())
+
+        return " | ".join(text_parts) if text_parts else None
+
+    except Exception as e:
+        print(f"[url_check] Meta extraction failed for {url}: {e}")
+        return None
+
+
+# ── Step 2: Firecrawl fallback ────────────────────────────────────────────────
 
 def fetch_via_firecrawl(url):
     """
@@ -40,8 +83,7 @@ def fetch_via_firecrawl(url):
     content as clean Markdown (capped at 3 000 characters).
 
     Returns None if the request fails, the API returns an error, or the
-    scraped content is empty — callers must handle the None case explicitly.
-    Never raises; all exceptions are caught and logged internally.
+    scraped content is empty. Never raises.
     """
     try:
         response = requests.post(
@@ -66,15 +108,37 @@ def fetch_via_firecrawl(url):
         return None
 
 
+# ── Orchestrator: try meta first, Firecrawl as fallback ───────────────────────
+
+def fetch_product_content(url):
+    """
+    Two-step content extraction strategy:
+
+      1. fetch_page_meta()  — direct HTTP + regex meta-tag extraction.
+                              Fast, free, no API key.
+                              Works for most e-commerce pages.
+      2. fetch_via_firecrawl() — full-page scrape via Firecrawl API.
+                              Slower, uses API credits, but handles
+                              JS-heavy or auth-walled pages better.
+
+    Returns the first non-empty result with >20 characters, or None if
+    both strategies fail.
+    """
+    meta = fetch_page_meta(url)
+    if meta and len(meta) > 20:
+        print(f"[url_check] Meta extraction succeeded ({len(meta)} chars): {url}")
+        return meta
+
+    print(f"[url_check] Meta insufficient, falling back to Firecrawl: {url}")
+    return fetch_via_firecrawl(url)
+
+
 # ── Low-confidence detection ──────────────────────────────────────────────────
 
-# The AI SYSTEM_PROMPT produces a fixed Markdown template. These patterns
-# match the two markers that reliably indicate the model couldn't identify
-# the product from the fetched page content.
 _LOW_CONF_PATTERN = re.compile(
-    r'\*Confidence\*\s*:\s*LOW'                                  # *Confidence:* LOW
+    r'\*Confidence\*\s*:\s*LOW'
     r'|'
-    r'\*Product\*\s*:.*\b(Unknown|N/A|Not\s+identified)\b',     # *Product:* Unknown / N/A
+    r'\*Product\*\s*:.*\b(Unknown|N/A|Not\s+identified)\b',
     re.IGNORECASE,
 )
 

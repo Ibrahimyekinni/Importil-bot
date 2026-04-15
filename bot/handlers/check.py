@@ -4,7 +4,7 @@ import traceback
 from bot.services.db_service import is_approved, save_query, get_user_language
 from bot.services.ai_service import analyze_text_query, analyze_image_query
 from bot.utils.messages import get_message
-from bot.handlers.url_check import extract_url, fetch_via_firecrawl, is_low_confidence
+from bot.handlers.url_check import extract_url, fetch_product_content, is_low_confidence
 
 # Per-user conversation history for CONDITIONAL follow-ups.
 # Structure: { telegram_id: [{"role": "user"|"assistant", "content": str}, ...] }
@@ -120,8 +120,8 @@ async def handle_check(update, context):
 
         if url:
             # ── URL/link query ────────────────────────────────────────────────
-            # Fetch the page via Jina AI Reader, then run a normal compliance
-            # check on the extracted text. Logged as query_type='link'.
+            # Try meta-tag extraction first; fall back to Firecrawl if needed.
+            # Logged as query_type='link'.
 
             await update.message.reply_text(get_message('fetching_link', language))
 
@@ -129,7 +129,7 @@ async def handle_check(update, context):
             typing_task = asyncio.create_task(keep_typing(context.bot, chat_id, stop_event))
 
             try:
-                page_text = fetch_via_firecrawl(url)
+                page_text = fetch_product_content(url)
 
                 if not page_text:
                     # Firecrawl couldn't open the page (expired link, geo-block, etc.)
