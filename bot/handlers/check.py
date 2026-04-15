@@ -4,7 +4,7 @@ import traceback
 from bot.services.db_service import is_approved, save_query, get_user_language
 from bot.services.ai_service import analyze_text_query, analyze_image_query
 from bot.utils.messages import get_message
-from bot.handlers.url_check import extract_url, fetch_via_jina
+from bot.handlers.url_check import extract_url, fetch_via_jina, is_low_confidence
 
 # Per-user conversation history for CONDITIONAL follow-ups.
 # Structure: { telegram_id: [{"role": "user"|"assistant", "content": str}, ...] }
@@ -142,17 +142,28 @@ async def handle_check(update, context):
                     conversation_history=None,
                     lang_instruction=lang_instruction,
                 )
-                verdict = extract_verdict(response)
 
-                save_query(
-                    telegram_id=telegram_id,
-                    query_type="link",
-                    query_content=url,
-                    verdict=verdict,
-                    full_response=response,
-                )
-
-                await update.message.reply_text(response, parse_mode="Markdown")
+                if is_low_confidence(response):
+                    # AI couldn't identify the product from the page — ask the
+                    # user to supply specifics rather than delivering a shaky verdict
+                    save_query(
+                        telegram_id=telegram_id,
+                        query_type="link",
+                        query_content=url,
+                        verdict="unclear",
+                        full_response=response,
+                    )
+                    await update.message.reply_text(get_message('link_unclear', language))
+                else:
+                    verdict = extract_verdict(response)
+                    save_query(
+                        telegram_id=telegram_id,
+                        query_type="link",
+                        query_content=url,
+                        verdict=verdict,
+                        full_response=response,
+                    )
+                    await update.message.reply_text(response, parse_mode="Markdown")
 
             except Exception:
                 traceback.print_exc()
