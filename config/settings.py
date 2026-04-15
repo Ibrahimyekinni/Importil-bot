@@ -23,3 +23,6 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
 # Telegram ID of the bot admin (Dekel) — used to restrict /refresh and send new-user alerts
 ADMIN_TELEGRAM_ID = int(os.getenv("ADMIN_TELEGRAM_ID", "0"))
+
+# Firecrawl API key — used by url_check to scrape product pages for compliance analysis
+FIRECRAWL_API_KEY = os.getenv("FIRECRAWL_API_KEY")

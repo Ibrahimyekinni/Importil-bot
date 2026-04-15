@@ -4,7 +4,7 @@ import traceback
 from bot.services.db_service import is_approved, save_query, get_user_language
 from bot.services.ai_service import analyze_text_query, analyze_image_query
 from bot.utils.messages import get_message
-from bot.handlers.url_check import extract_url, fetch_via_jina, is_low_confidence
+from bot.handlers.url_check import extract_url, fetch_via_firecrawl, is_low_confidence
 
 # Per-user conversation history for CONDITIONAL follow-ups.
 # Structure: { telegram_id: [{"role": "user"|"assistant", "content": str}, ...] }
@@ -129,7 +129,19 @@ async def handle_check(update, context):
             typing_task = asyncio.create_task(keep_typing(context.bot, chat_id, stop_event))
 
             try:
-                page_text = fetch_via_jina(url)
+                page_text = fetch_via_firecrawl(url)
+
+                if not page_text:
+                    # Firecrawl couldn't open the page (expired link, geo-block, etc.)
+                    save_query(
+                        telegram_id=telegram_id,
+                        query_type="link",
+                        query_content=url,
+                        verdict="unclear",
+                        full_response="Firecrawl returned no content.",
+                    )
+                    await update.message.reply_text(get_message('link_fetch_failed', language))
+                    return
 
                 # Build a product description the AI understands
                 product_description = (
@@ -144,8 +156,8 @@ async def handle_check(update, context):
                 )
 
                 if is_low_confidence(response):
-                    # AI couldn't identify the product from the page — ask the
-                    # user to supply specifics rather than delivering a shaky verdict
+                    # AI couldn't identify the product from the page content —
+                    # ask the user to supply specifics rather than a shaky verdict
                     save_query(
                         telegram_id=telegram_id,
                         query_type="link",
