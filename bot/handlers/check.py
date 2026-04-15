@@ -131,16 +131,21 @@ async def handle_check(update, context):
             try:
                 page_text = fetch_product_content(url)
 
-                if not page_text:
-                    # Firecrawl couldn't open the page (expired link, geo-block, etc.)
+                # ── Debug: always visible in Vercel logs ──────────────────────
+                print(f"[DEBUG] fetch_product_content returned: {repr(page_text[:120] if page_text else page_text)}")
+
+                if not page_text or len(page_text.strip()) < 30:
+                    # Both fetch methods failed or returned too little content
+                    # (short strings are generic site titles, not product data)
                     save_query(
                         telegram_id=telegram_id,
                         query_type="link",
                         query_content=url,
                         verdict="unclear",
-                        full_response="Firecrawl returned no content.",
+                        full_response=f"Fetch returned insufficient content: {repr(page_text)}",
                     )
                     await update.message.reply_text(get_message('link_fetch_failed', language))
+                    await update.message.reply_text(get_message('link_fetch_tip', language))
                     return
 
                 # Build a product description the AI understands

@@ -121,16 +121,22 @@ def fetch_product_content(url):
                               Slower, uses API credits, but handles
                               JS-heavy or auth-walled pages better.
 
-    Returns the first non-empty result with >20 characters, or None if
-    both strategies fail.
+    Returns the first result with >= 30 characters (matching the guard in
+    check.py), or None if both strategies fail. Never returns a fabricated
+    fallback string — only real content or None.
     """
     meta = fetch_page_meta(url)
-    if meta and len(meta) > 20:
+    if meta and len(meta.strip()) >= 30:
         print(f"[url_check] Meta extraction succeeded ({len(meta)} chars): {url}")
         return meta
 
-    print(f"[url_check] Meta insufficient, falling back to Firecrawl: {url}")
-    return fetch_via_firecrawl(url)
+    print(f"[url_check] Meta insufficient ({len(meta) if meta else 0} chars), trying Firecrawl: {url}")
+    result = fetch_via_firecrawl(url)
+
+    if not result:
+        print(f"[url_check] Both methods failed — returning None for: {url}")
+
+    return result
 
 
 # ── Low-confidence detection ──────────────────────────────────────────────────
