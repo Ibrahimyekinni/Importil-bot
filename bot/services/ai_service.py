@@ -10,6 +10,30 @@ from bot.services.drive_service import get_all_documents_text
 TEXT_MODEL   = "llama-3.3-70b-versatile"
 VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
+FREQUENCY_MAP = {
+    "2.4ghz":    ("2400",  "2483.5", "EN 300 328"),
+    "wifi":      ("2400",  "2483.5", "EN 300 328"),
+    "bluetooth": ("2400",  "2483.5", "EN 300 328"),
+    "bt":        ("2400",  "2483.5", "EN 300 328"),
+    "ble":       ("2400",  "2483.5", "EN 300 328"),
+    "5ghz":      ("5150",  "5350",   "EN 301 893"),
+    "zigbee":    ("2400",  "2483.5", "EN 300 440"),
+    "thread":    ("2400",  "2483.5", "EN 300 440"),
+    "nfc":       ("13.56", "13.56",  "EN 300 330"),
+    "rfid":      ("13.56", "13.56",  "EN 300 330"),
+    "lora":      ("868",   "868.6",  "EN 300 220"),
+    "433mhz":    ("433",   "434.79", "EN 300 220"),
+    "433":       ("433",   "434.79", "EN 300 220"),
+    "868mhz":    ("868",   "868.6",  "EN 300 220"),
+    "868":       ("868",   "868.6",  "EN 300 220"),
+}
+
+HARD_STOPS = [
+    ("5.8ghz", "⚠️ WARNING: 5.8GHz (5725-5875 MHz) is restricted in Israel. High risk of rejection."),
+    ("5725",   "⚠️ WARNING: 5725-5875 MHz is restricted in Israel. High risk of rejection."),
+    ("5875",   "⚠️ WARNING: 5725-5875 MHz is restricted in Israel. High risk of rejection."),
+]
+
 # System prompt that defines Importil's persona and behaviour for every query
 SYSTEM_PROMPT = """You are Importil, an elite Israeli customs compliance AI with deep expertise in Israeli telecommunications law. You have the following regulations memorized:
 
@@ -107,6 +131,33 @@ RESPONSE FORMAT - ALWAYS USE THIS EXACTLY:
 """
 
 
+def normalize_frequencies(product_text, ai_response):
+    """
+    Appends hard-stop warnings and frequency reference blocks to the AI response
+    based on keywords found in the product description. Called after every AI
+    call so the user always gets gov.il form data when a known frequency is mentioned.
+    """
+    text = product_text.lower()
+    result = ai_response
+
+    for keyword, warning in HARD_STOPS:
+        if keyword in text:
+            result += f"\n\n{warning}"
+
+    seen = set()
+    for keyword, (from_mhz, to_mhz, standard) in FREQUENCY_MAP.items():
+        if keyword in text:
+            entry = (from_mhz, to_mhz, standard)
+            if entry not in seen:
+                seen.add(entry)
+                result += (
+                    f"\n\n📡 Frequency Reference (for gov.il form):\n"
+                    f"From: {from_mhz} MHz | To: {to_mhz} MHz | Standard: {standard}"
+                )
+
+    return result
+
+
 def get_client():
     """Creates and returns an authenticated Groq client using GROQ_API_KEY."""
     return Groq(api_key=GROQ_API_KEY)
@@ -194,7 +245,8 @@ Please provide:
             ]
         )
 
-        return format_verdict(response.choices[0].message.content)
+        ai_response = format_verdict(response.choices[0].message.content)
+        return normalize_frequencies(product_description, ai_response)
 
     except Exception as e:
         print(f"[ai_service] Error in analyze_text_query: {e}")
@@ -272,7 +324,8 @@ Please do the following in order:
             ]
         )
 
-        return format_verdict(response.choices[0].message.content)
+        ai_response = format_verdict(response.choices[0].message.content)
+        return normalize_frequencies(additional_text, ai_response)
 
     except Exception as e:
         print(f"[ai_service] Error in analyze_image_query: {type(e).__name__}: {e}")
