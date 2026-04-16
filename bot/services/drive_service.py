@@ -8,7 +8,7 @@
 import io
 import os
 
-import PyPDF2
+import pypdf
 import openpyxl
 from docx import Document
 from google.oauth2.service_account import Credentials
@@ -89,7 +89,7 @@ def read_file(file_id, mime_type):
 
         # ── PDF ─────────────────────────────────────────────────────────────
         if mime_type == "application/pdf":
-            reader = PyPDF2.PdfReader(buffer)
+            reader = pypdf.PdfReader(buffer)
             text = ""
             for page in reader.pages:
                 extracted = page.extract_text()
