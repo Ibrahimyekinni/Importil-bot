@@ -13,7 +13,6 @@ from telegram.ext import (
     Application,
     CallbackQueryHandler,
     CommandHandler,
-    ConversationHandler,
     MessageHandler,
     filters,
 )
@@ -23,7 +22,7 @@ from bot.handlers.help import handle_help
 from bot.handlers.link import handle_link
 from bot.handlers.refresh import handle_refresh
 from bot.handlers.language import handle_language_command, handle_language_callback
-from bot.handlers.track import ASK_IMPORTER_TYPE, ASK_QUANTITY, receive_importer_type, receive_quantity, start_track
+from bot.handlers.track import handle_track, handle_track_callback
 from bot.services.db_service import create_tables
 from config.settings import TELEGRAM_BOT_TOKEN
 
@@ -62,23 +61,13 @@ async def setup_bot():
     # Inline keyboard callbacks for language selection (lang_en / lang_he)
     application.add_handler(CallbackQueryHandler(handle_language_callback, pattern="^lang_"))
 
-    # Collect importer type + quantity before running compliance check
-    application.add_handler(ConversationHandler(
-        entry_points=[
-            MessageHandler(filters.Document.ALL, start_track),
-            MessageHandler(filters.PHOTO, start_track),
-            MessageHandler(filters.TEXT & ~filters.COMMAND, start_track),
-        ],
-        states={
-            ASK_IMPORTER_TYPE: [
-                CallbackQueryHandler(receive_importer_type, pattern="^track_"),
-            ],
-            ASK_QUANTITY: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_quantity),
-            ],
-        },
-        fallbacks=[CommandHandler("start", handle_start)],
-    ))
+    # Inline keyboard callbacks for importer-type selection (track_private / track_company)
+    application.add_handler(CallbackQueryHandler(handle_track_callback, pattern="^track_"))
+
+    # All user messages route through the stateful track handler (state persisted in DB)
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_track))
+    application.add_handler(MessageHandler(filters.Document.ALL, handle_track))
+    application.add_handler(MessageHandler(filters.PHOTO, handle_track))
 
     print(f"[webhook] Registered handlers: {application.handlers}")
 

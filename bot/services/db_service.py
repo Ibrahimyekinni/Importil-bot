@@ -56,6 +56,12 @@ def create_tables():
                     timestamp     TIMESTAMP DEFAULT NOW()
                 );
             """)
+            cur.execute("""
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS conv_state VARCHAR(50) DEFAULT NULL;
+            """)
+            cur.execute("""
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS conv_data TEXT DEFAULT NULL;
+            """)
         conn.commit()
 
 
@@ -237,3 +243,46 @@ def get_user_language(telegram_id):
     if user and user.get("language"):
         return user["language"]
     return "en"
+
+
+def set_user_state(telegram_id, state, data=None):
+    """
+    Upserts conv_state and conv_data for the given user.
+    Pass state=None to clear the conversation state.
+    Does nothing if the database is unreachable.
+    """
+    conn = get_connection()
+    if conn is None:
+        return
+
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO users (telegram_id, conv_state, conv_data)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (telegram_id) DO UPDATE
+                    SET conv_state = EXCLUDED.conv_state,
+                        conv_data  = EXCLUDED.conv_data;
+            """, (telegram_id, state, data))
+        conn.commit()
+
+
+def get_user_state(telegram_id):
+    """
+    Returns (conv_state, conv_data) for the given user.
+    Returns (None, None) if the user is not found or the DB is unreachable.
+    """
+    conn = get_connection()
+    if conn is None:
+        return (None, None)
+
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT conv_state, conv_data FROM users WHERE telegram_id = %s;",
+                (telegram_id,)
+            )
+            row = cur.fetchone()
+            if row is None:
+                return (None, None)
+            return (row[0], row[1])
