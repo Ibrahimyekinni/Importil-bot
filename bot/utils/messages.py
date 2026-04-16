@@ -6,7 +6,7 @@ MESSAGES = {
             "Your registration has been received. Dekel will approve your access shortly."
         ),
         'welcome_back': "Welcome back {username}! 👋\n\nYou're verified. Send me a product name or photo to check customs compliance into Israel. 🇮🇱",
-        'pending': "⏳ Your account is pending approval. Dekel will notify you once you're verified.",
+        'pending': "⏳ Your account is pending approval. You'll be notified once your access is approved.",
         'no_access': "⛔ You don't have access yet. Please wait for approval.",
         'link_success': "✅ Email linked successfully! Waiting for Dekel's approval.",
         'link_usage': "Please provide your email. Example: /link your@email.com",
@@ -68,7 +68,7 @@ MESSAGES = {
             "הרישום שלך התקבל. דקל יאשר את הגישה שלך בקרוב."
         ),
         'welcome_back': "ברוך שובך {username}! 👋\n\nהחשבון שלך מאומת. שלח לי שם מוצר או תמונה לבדיקת תאימות יבוא לישראל. 🇮🇱",
-        'pending': "⏳ החשבון שלך ממתין לאישור. דקל יודיע לך כאשר תאומת.",
+        'pending': "⏳ החשבון שלך ממתין לאישור. תקבל הודעה ברגע שהגישה שלך תאושר.",
         'no_access': "⛔ אין לך גישה עדיין. אנא המתן לאישור.",
         'link_success': "✅ האימייל קושר בהצלחה! ממתין לאישור דקל.",
         'link_usage': "אנא ספק את האימייל שלך. דוגמה: /link your@email.com",
