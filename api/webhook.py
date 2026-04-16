@@ -23,6 +23,7 @@ from bot.handlers.link import handle_link
 from bot.handlers.check import handle_check
 from bot.handlers.refresh import handle_refresh
 from bot.handlers.language import handle_language_command, handle_language_callback
+from bot.handlers.document_check import handle_document_check
 from bot.services.db_service import create_tables
 from config.settings import TELEGRAM_BOT_TOKEN
 
@@ -60,6 +61,9 @@ async def setup_bot():
 
     # Inline keyboard callbacks for language selection (lang_en / lang_he)
     application.add_handler(CallbackQueryHandler(handle_language_callback, pattern="^lang_"))
+
+    # Document messages (PDF / DOCX) — routed to handle_document_check
+    application.add_handler(MessageHandler(filters.Document.ALL, handle_document_check))
 
     # Photo messages — routed to handle_check for compliance analysis
     application.add_handler(MessageHandler(filters.PHOTO, handle_check))

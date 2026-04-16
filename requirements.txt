@@ -8,6 +8,6 @@ google-api-python-client
 flask
 python-dotenv
 Pillow
-PyPDF2
+pypdf
 openpyxl
 python-docx

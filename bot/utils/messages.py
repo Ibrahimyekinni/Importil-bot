@@ -38,6 +38,8 @@ MESSAGES = {
             "/help - Show this message\n\n"
             "Once approved, send me a product name or photo and I'll check if it's allowed into Israel. 🇮🇱"
         ),
+        'analyzing_document': "📄 Reading document and checking compliance... please wait",
+        'document_error': "⚠️ Sorry, I couldn't read that file. Please try a PDF or Word document, or just type the product details directly.",
         'new_user_admin': (
             "🆕 New importer registered!\n\n"
             "Name: @{username}\n"
@@ -84,6 +86,8 @@ MESSAGES = {
             "/help - הצג הודעה זו\n\n"
             "לאחר אישור, שלח שם מוצר או תמונה ואבדוק אם מותר לייבא לישראל. 🇮🇱"
         ),
+        'analyzing_document': "📄 קורא את המסמך ובודק תאימות... אנא המתן",
+        'document_error': "⚠️ מצטער, לא הצלחתי לקרוא את הקובץ. אנא נסה PDF או מסמך Word, או פשוט הקלד את פרטי המוצר ישירות.",
         'new_user_admin': (
             "🆕 New importer registered!\n\n"
             "Name: @{username}\n"
