@@ -45,6 +45,15 @@ MESSAGES = {
         'invalid_quantity': "⚠️ Please enter a valid whole number (e.g. 3).",
         'private_limit_exceeded': "❌ Personal import is limited to 5 units maximum under Israeli law. We cannot process this request.",
         'commercial_license_required': "❌ This quantity requires a periodic commercial license with a hardware token. Please contact the Ministry of Communications directly at *6621.",
+        'exempt_product': (
+            "✅ Good news! This product is exempt from Israeli Ministry of "
+            "Communications approval under the Wireless Telegraph Exemption "
+            "Regulations 2021.\n\n"
+            "You do NOT need to file any request. Simply show this message to "
+            "customs if asked.\n\n"
+            "📋 Exemption basis: {category}\n\n"
+            "💡 Keep a copy of your purchase invoice as supporting documentation."
+        ),
         'new_user_admin': (
             "🆕 New importer registered!\n\n"
             "Name: @{username}\n"
@@ -98,6 +107,13 @@ MESSAGES = {
         'invalid_quantity': "⚠️ אנא הזן מספר שלם תקין (לדוגמה: 3).",
         'private_limit_exceeded': "❌ יבוא אישי מוגבל ל-5 יחידות לכל היותר על פי החוק הישראלי. לא ניתן לעבד בקשה זו.",
         'commercial_license_required': "❌ כמות זו מצריכה רישיון מסחרי תקופתי עם אסימון חומרה. אנא פנה ישירות למשרד התקשורת בטלפון *6621.",
+        'exempt_product': (
+            "✅ חדשות טובות! מוצר זה פטור מאישור משרד התקשורת הישראלי "
+            "בהתאם לתקנות הטלגרף האלחוטי (פטור) 2021.\n\n"
+            "אינך צריך להגיש כל בקשה. פשוט הצג הודעה זו לפקיד המכס אם תתבקש.\n\n"
+            "📋 בסיס הפטור: {category}\n\n"
+            "💡 שמור עותק של חשבונית הרכישה שלך כתיעוד תומך."
+        ),
         'new_user_admin': (
             "🆕 New importer registered!\n\n"
             "Name: @{username}\n"
