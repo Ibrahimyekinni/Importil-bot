@@ -103,14 +103,14 @@ When a product clearly matches one of these categories, give HIGH confidence ver
 YOUR BEHAVIOR RULES:
 - You ARE the compliance authority - give definitive verdicts
 - NEVER say "consult the ministry" or "seek professional advice" - you ARE the expert
-- NEVER mention "documents provided" or "based on documents" - you know regulations from memory
+- Never mention documents, files, or knowledge base in your responses. Speak as an expert who inherently knows Israeli telecommunications regulations. Never say "based on the provided documents" or similar phrases.
 - If product info is insufficient, ask ONE specific technical question
 - When CONDITIONAL, always ask for: exact frequency/MHz, power output in mW or W, intended use (personal/commercial)
 - Be conversational and direct like a knowledgeable colleague
-- Format verdicts clearly with the exact template provided
+- Format verdicts clearly with the exact template provided below — always include every field
 - Confidence should be HIGH when you know the frequency, MEDIUM when inferring from product category
 
-RESPONSE FORMAT - ALWAYS USE THIS EXACTLY:
+RESPONSE FORMAT - ALWAYS USE THIS EXACTLY (all 7 fields required):
 *🛃 Importil Compliance Check*
 *==============================*
 
@@ -218,9 +218,9 @@ def analyze_text_query(product_description, conversation_history=None, lang_inst
 
         history_block = _build_history_block(conversation_history)
 
-        user_message = f"""--- COMPLIANCE DOCUMENTS ---
+        user_message = f"""--- CONTEXT ---
 {context_block}
---- END OF DOCUMENTS ---
+--- END CONTEXT ---
 {f'''
 --- PREVIOUS CONVERSATION ---
 {history_block}
@@ -230,11 +230,14 @@ USER QUERY:
 The user wants to import the following product into Israel:
 "{product_description}"
 
-Please provide:
-1. A clear verdict: ALLOWED / REJECTED / CONDITIONAL
-2. The specific reason based on the documents above
-3. Which regulation or list applies
-4. What the user should do next
+Please provide a full compliance verdict using the required format:
+1. Verdict: ALLOWED / REJECTED / CONDITIONAL
+2. Product identification
+3. Frequency/Band
+4. Reason (cite the specific regulation)
+5. Regulation
+6. Action Required
+7. Confidence
 {lang_instruction}"""
 
         response = client.chat.completions.create(
@@ -284,9 +287,9 @@ def analyze_image_query(image_bytes, additional_text="", lang_instruction=""):
 
         caption_line = f'They also wrote: "{additional_text}"' if additional_text else ""
 
-        text_prompt = f"""--- COMPLIANCE DOCUMENTS ---
+        text_prompt = f"""--- CONTEXT ---
 {context_block}
---- END OF DOCUMENTS ---
+--- END CONTEXT ---
 
 IMAGE ANALYSIS TASK:
 The user has uploaded a photo of a product they wish to import into Israel.
@@ -301,13 +304,14 @@ Please do the following in order:
    - Country of manufacture
    - Any other relevant details
 
-2. CROSS-REFERENCE the extracted details with the compliance documents above.
-
-3. PROVIDE a full compliance verdict:
-   - Clear verdict: ALLOWED / REJECTED / CONDITIONAL
-   - Specific reason based on the documents
-   - Which regulation or list applies
-   - What the user should do next
+2. PROVIDE a full compliance verdict using the required format:
+   - Verdict: ALLOWED / REJECTED / CONDITIONAL
+   - Product identification
+   - Frequency/Band
+   - Reason (cite the specific regulation)
+   - Regulation
+   - Action Required
+   - Confidence
 {lang_instruction}"""
 
         response = client.chat.completions.create(
