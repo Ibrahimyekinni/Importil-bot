@@ -187,12 +187,74 @@
     /* ── Muted / helper text ── */
     .muted { color: var(--muted); }
     .mono  { font-family: "SF Mono", "Fira Code", monospace; font-size: 12px; }
+
+    /* ── Hamburger toggle (hidden on desktop) ── */
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 22px;
+      cursor: pointer;
+      padding: 4px 8px;
+      margin-left: auto;
+      line-height: 1;
+    }
+
+    /* ── Mobile breakpoint ── */
+    @media (max-width: 640px) {
+      nav {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 0 16px;
+        gap: 0;
+      }
+
+      .nav-brand {
+        padding: 14px 0;
+        flex: 1;
+      }
+
+      .nav-toggle {
+        display: block;
+        align-self: center;
+      }
+
+      .nav-links {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        padding: 6px 0 12px;
+        gap: 2px;
+      }
+
+      nav.nav-open .nav-links {
+        display: flex;
+      }
+
+      .nav-logout {
+        display: none;
+        width: 100%;
+        padding-bottom: 12px;
+      }
+
+      nav.nav-open .nav-logout {
+        display: block;
+      }
+
+      main {
+        padding: 20px 16px;
+      }
+
+      h1 { font-size: 18px; margin-bottom: 18px; }
+    }
   </style>
 </head>
 <body>
 
-<nav>
+<nav id="main-nav">
   <a class="nav-brand" href="/">🛃 Importil <span>by Drivetech360</span></a>
+  <button class="nav-toggle" aria-label="Toggle navigation" onclick="document.getElementById('main-nav').classList.toggle('nav-open')">&#9776;</button>
   <div class="nav-links">
     <a href="/"         {% if request.path == '/'         %}class="active"{% endif %}>Dashboard</a>
     <a href="/users"    {% if request.path == '/users'    %}class="active"{% endif %}>Users</a>

@@ -6,7 +6,8 @@
 
 <div class="card">
   {% if users %}
-  <table>
+  <div style="overflow-x:auto;">
+  <table style="min-width:640px;">
     <thead>
       <tr>
         <th>Telegram ID</th>
@@ -70,6 +71,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
   {% else %}
     <p class="muted" style="padding:12px 0;">No users registered yet.</p>
   {% endif %}

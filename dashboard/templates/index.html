@@ -5,7 +5,7 @@
 <h1>Dashboard</h1>
 
 <!-- Stats cards -->
-<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:32px;">
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:16px; margin-bottom:32px;">
 
   <div class="card" style="border-top:3px solid #4f8ef7;">
     <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px;">Total Users</div>
@@ -33,6 +33,7 @@
 <h2>Recent Activity</h2>
 <div class="card">
   {% if recent_queries %}
+  <div style="overflow-x:auto;">
   <table>
     <thead>
       <tr>
@@ -75,6 +76,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
   {% else %}
     <p class="muted" style="padding:12px 0;">No queries yet.</p>
   {% endif %}

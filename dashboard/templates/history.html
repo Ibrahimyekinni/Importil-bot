@@ -6,7 +6,8 @@
 
 <div class="card">
   {% if queries %}
-  <table>
+  <div style="overflow-x:auto;">
+  <table style="min-width:580px;">
     <thead>
       <tr>
         <th>User ID</th>
@@ -58,6 +59,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
   {% else %}
     <p class="muted" style="padding:12px 0;">No queries recorded yet.</p>
   {% endif %}
