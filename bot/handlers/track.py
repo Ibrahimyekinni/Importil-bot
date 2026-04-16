@@ -18,6 +18,7 @@ _original_updates: dict = {}
 
 
 async def start_track(update, context):
+    print("[track] start_track triggered")
     telegram_id = update.effective_user.id
     language = get_user_language(telegram_id)
 
