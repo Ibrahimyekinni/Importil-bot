@@ -2,10 +2,50 @@
 {% block title %}Users — Importil{% endblock %}
 
 {% block content %}
-<h1>Users <span class="muted" style="font-size:15px;font-weight:400;">({{ users|length }} total)</span></h1>
+<h1>Users <span class="muted" style="font-size:16px;font-weight:300;font-family:'DM Sans',sans-serif;">({{ users|length }})</span></h1>
 
-<div class="card">
-  {% if users %}
+{% if users %}
+
+<!-- Mobile: card list -->
+<div class="user-cards">
+  {% for user in users %}
+  <div class="user-card">
+    <div class="user-card-top">
+      <div>
+        <div class="user-name">
+          {% if user.telegram_username %}@{{ user.telegram_username }}{% else %}<span class="muted">No username</span>{% endif %}
+        </div>
+        <div class="mono muted" style="margin-top:3px;">{{ user.telegram_id }}</div>
+      </div>
+      <div>
+        {% if user.approved %}
+          <span class="badge badge-green">✅ Approved</span>
+        {% else %}
+          <span class="badge badge-amber">⏳ Pending</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="user-card-meta">
+      <span>Joined {% if user.linked_at %}{{ user.linked_at.strftime('%d %b %Y') }}{% else %}—{% endif %}</span>
+      {% if user.email %}<span>{{ user.email }}</span>{% endif %}
+    </div>
+    <div>
+      {% if user.approved %}
+        <form method="POST" action="/revoke/{{ user.telegram_id }}" onsubmit="return confirm('Revoke access for @{{ user.telegram_username or user.telegram_id }}?')">
+          <button type="submit" class="btn btn-red">Revoke</button>
+        </form>
+      {% else %}
+        <form method="POST" action="/approve/{{ user.telegram_id }}">
+          <button type="submit" class="btn btn-green">Approve</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Desktop: table -->
+<div class="user-table card">
   <div style="overflow-x:auto;">
   <table style="min-width:640px;">
     <thead>
@@ -23,39 +63,17 @@
       {% for user in users %}
       <tr>
         <td class="mono">{{ user.telegram_id }}</td>
-
-        <td>
-          {% if user.telegram_username %}
-            @{{ user.telegram_username }}
-          {% else %}
-            <span class="muted">—</span>
-          {% endif %}
-        </td>
-
-        <td>
-          {% if user.email %}
-            {{ user.email }}
-          {% else %}
-            <span class="muted">Not linked</span>
-          {% endif %}
-        </td>
-
+        <td>{% if user.telegram_username %}@{{ user.telegram_username }}{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td>{% if user.email %}{{ user.email }}{% else %}<span class="muted">Not linked</span>{% endif %}</td>
         <td>
           {% if user.approved %}
             <span class="badge badge-green">✅ Approved</span>
           {% else %}
-            <span class="badge badge-yellow">⏳ Pending</span>
+            <span class="badge badge-amber">⏳ Pending</span>
           {% endif %}
         </td>
-
-        <td class="muted">
-          {% if user.linked_at %}{{ user.linked_at.strftime('%d %b %Y') }}{% endif %}
-        </td>
-
-        <td class="muted">
-          {% if user.approved_at %}{{ user.approved_at.strftime('%d %b %Y') }}{% else %}—{% endif %}
-        </td>
-
+        <td class="muted">{% if user.linked_at %}{{ user.linked_at.strftime('%d %b %Y') }}{% endif %}</td>
+        <td class="muted">{% if user.approved_at %}{{ user.approved_at.strftime('%d %b %Y') }}{% else %}—{% endif %}</td>
         <td>
           {% if user.approved %}
             <form method="POST" action="/revoke/{{ user.telegram_id }}" style="display:inline;" onsubmit="return confirm('Revoke access for @{{ user.telegram_username or user.telegram_id }}?')">
@@ -72,8 +90,53 @@
     </tbody>
   </table>
   </div>
-  {% else %}
-    <p class="muted" style="padding:12px 0;">No users registered yet.</p>
-  {% endif %}
 </div>
+
+{% else %}
+<div class="card">
+  <p class="muted">No users registered yet.</p>
+</div>
+{% endif %}
+
+<style>
+  .user-cards { display: flex; flex-direction: column; gap: 10px; }
+  .user-table { display: none; }
+
+  @media (min-width: 640px) {
+    .user-cards { display: none; }
+    .user-table { display: block; }
+  }
+
+  .user-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+  }
+
+  .user-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .user-name {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .user-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+  }
+
+  .user-card form { margin: 0; }
+</style>
 {% endblock %}

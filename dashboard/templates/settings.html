@@ -1,31 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Settings — Importil Admin{% endblock %}
+{% block title %}Settings — Importil{% endblock %}
 
 {% block content %}
 <h1>Settings</h1>
 
-<div class="card" style="max-width: 480px;">
+<div class="card" style="max-width:480px;">
   <h2>Admin Language</h2>
-  <p class="muted" style="margin-bottom: 20px; line-height: 1.5;">
+  <p class="muted" style="margin-bottom:24px;line-height:1.6;font-size:13px;">
     Choose the language Importil uses when sending bot messages to your Telegram account.
   </p>
 
   <form method="POST" action="/settings/language">
-    <div style="margin-bottom: 20px;">
-      <label style="display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
-        Preferred Language
-      </label>
-      <select name="language" style="
-        width: 100%;
-        background: var(--surface2);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        color: var(--text);
-        font-size: 14px;
-        padding: 10px 12px;
-        outline: none;
-        cursor: pointer;
-      ">
+    <div style="margin-bottom:22px;">
+      <label class="field-label">Preferred Language</label>
+      <select name="language" class="field-select">
         <option value="en" {% if current_language == 'en' %}selected{% endif %}>English 🇬🇧</option>
         <option value="he" {% if current_language == 'he' %}selected{% endif %}>עברית 🇮🇱</option>
       </select>
@@ -34,4 +22,46 @@
     <button type="submit" class="btn btn-blue">Save Language</button>
   </form>
 </div>
+
+<style>
+  .field-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .field-select {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    padding: 11px 14px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+
+  .field-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .field-select option {
+    background: #0d1520;
+    color: #f1f5f9;
+  }
+</style>
 {% endblock %}

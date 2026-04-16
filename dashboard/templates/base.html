@@ -4,139 +4,184 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}Importil Admin{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg:        #0a0a1a;
-      --surface:   #1a1d27;
-      --surface2:  #22263a;
-      --border:    #2e3350;
-      --accent:    #4f8ef7;
-      --accent-h:  #3a7ae0;
-      --green:     #2ecc71;
-      --red:       #e74c3c;
-      --yellow:    #f39c12;
-      --text:      #e8eaf0;
-      --muted:     #8890aa;
-      --radius:    8px;
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
     }
 
+    *, *::before, *::after { box-sizing: border-box; }
+
+    :root {
+      --bg:            #080c14;
+      --bg2:           #0d1520;
+      --surface:       rgba(255,255,255,0.04);
+      --surface-hover: rgba(255,255,255,0.07);
+      --border:        rgba(255,255,255,0.08);
+      --accent:        #3b82f6;
+      --accent-glow:   rgba(59,130,246,0.3);
+      --green:         #10b981;
+      --red:           #ef4444;
+      --amber:         #f59e0b;
+      --text:          #f1f5f9;
+      --text-muted:    #64748b;
+      --radius:        10px;
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
+    * { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) var(--bg); }
+
     body {
-      background: linear-gradient(135deg, #0a0a1a 0%, #0d1b2a 100%);
-      background-attachment: fixed;
+      background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       font-size: 14px;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
     }
 
-    /* ── Navbar (glassmorphism) ── */
+    /* ── Navbar ── */
     nav {
-      background: rgba(255,255,255,0.05);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      padding: 0 28px;
+      background: rgba(8,12,20,0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
       display: flex;
       align-items: center;
       height: 56px;
-      gap: 32px;
       position: sticky;
       top: 0;
       z-index: 100;
     }
 
     .nav-brand {
+      font-family: 'Syne', sans-serif;
       font-size: 17px;
       font-weight: 700;
-      color: var(--accent);
+      color: var(--text);
       text-decoration: none;
-      letter-spacing: 0.3px;
+      letter-spacing: -0.2px;
       white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-right: 36px;
     }
 
-    .nav-brand span {
-      color: var(--muted);
-      font-weight: 400;
-      font-size: 12px;
-      margin-left: 6px;
+    .nav-brand-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent-glow), 0 0 18px var(--accent-glow);
+      flex-shrink: 0;
     }
 
     .nav-links {
       display: flex;
-      gap: 4px;
       flex: 1;
     }
 
     .nav-links a {
-      color: var(--muted);
+      color: var(--text-muted);
       text-decoration: none;
-      padding: 6px 14px;
-      border-radius: var(--radius);
-      transition: background 0.15s, color 0.15s;
-      font-weight: 500;
+      padding: 8px 14px;
+      font-weight: 400;
+      font-size: 14px;
+      transition: color 0.2s;
+      position: relative;
     }
 
-    .nav-links a:hover,
-    .nav-links a.active {
-      background: rgba(255,255,255,0.08);
-      color: var(--text);
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 14px;
+      right: 14px;
+      height: 2px;
+      background: var(--accent);
+      transform: scaleX(0);
+      transition: transform 0.2s ease;
+      border-radius: 1px 1px 0 0;
     }
+
+    .nav-links a:hover { color: var(--text); }
+    .nav-links a:hover::after,
+    .nav-links a.active::after { transform: scaleX(1); }
+    .nav-links a.active { color: var(--text); }
 
     .nav-logout a {
-      color: var(--red);
+      color: var(--text-muted);
       text-decoration: none;
-      padding: 6px 14px;
-      border-radius: var(--radius);
-      font-weight: 500;
-      transition: background 0.15s;
+      padding: 8px 14px;
+      font-size: 14px;
+      transition: color 0.2s;
     }
 
-    .nav-logout a:hover { background: rgba(255,255,255,0.08); }
+    .nav-logout a:hover { color: var(--red); }
 
-    /* ── Hamburger (hidden on desktop) ── */
+    /* ── Hamburger ── */
     .nav-toggle {
       display: none;
       background: none;
       border: none;
       color: var(--text);
-      font-size: 22px;
       cursor: pointer;
-      padding: 4px 8px;
+      padding: 8px;
       margin-left: auto;
-      line-height: 1;
+      flex-direction: column;
+      gap: 5px;
+      align-items: center;
+      justify-content: center;
     }
 
-    /* ── Mobile slide-out overlay ── */
+    .nav-toggle span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: all 0.25s ease;
+    }
+
+    /* ── Overlay ── */
     #nav-overlay {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.55);
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
       z-index: 200;
     }
 
     #nav-overlay.open { display: block; }
 
+    /* ── Mobile slide-out (RIGHT, 70vw) ── */
     #mobile-menu {
       position: fixed;
       top: 0;
-      right: -50vw;
-      width: 50vw;
-      min-width: 200px;
+      right: -70vw;
+      width: 70vw;
       height: 100vh;
-      background: rgba(8,10,24,0.97);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-left: 1px solid rgba(255,255,255,0.1);
+      background: rgba(8,12,20,0.98);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-left: 1px solid var(--border);
       z-index: 300;
-      transition: right 0.3s ease;
+      transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
       display: flex;
       flex-direction: column;
-      padding: 72px 16px 32px;
+      padding-top: 80px;
     }
 
     #mobile-menu.open { right: 0; }
@@ -144,162 +189,206 @@
     .mobile-links {
       display: flex;
       flex-direction: column;
-      gap: 4px;
       flex: 1;
     }
 
     .mobile-links a {
-      color: var(--muted);
+      font-family: 'Syne', sans-serif;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-muted);
       text-decoration: none;
-      padding: 12px 16px;
-      border-radius: var(--radius);
-      font-weight: 500;
-      font-size: 15px;
-      transition: background 0.15s, color 0.15s;
+      padding: 16px 28px;
+      border-left: 3px solid transparent;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
     }
 
-    .mobile-links a:hover,
-    .mobile-links a.active {
-      background: rgba(255,255,255,0.08);
+    .mobile-links a:hover {
       color: var(--text);
+      background: var(--surface-hover);
+      border-left-color: rgba(59,130,246,0.4);
+    }
+
+    .mobile-links a.active {
+      color: var(--text);
+      border-left-color: var(--accent);
+      background: rgba(59,130,246,0.06);
+    }
+
+    .mobile-logout {
+      padding: 20px 25px 40px;
     }
 
     .mobile-logout a {
+      font-family: 'Syne', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
       color: var(--red);
       text-decoration: none;
-      padding: 12px 16px;
-      border-radius: var(--radius);
-      font-weight: 500;
-      font-size: 15px;
       display: block;
-      transition: background 0.15s;
+      opacity: 0.8;
+      transition: opacity 0.2s;
     }
 
-    .mobile-logout a:hover { background: rgba(255,255,255,0.06); }
+    .mobile-logout a:hover { opacity: 1; }
 
-    /* ── Main layout ── */
+    /* ── Main ── */
     main {
       flex: 1;
-      padding: 32px 28px;
+      padding: 36px 32px;
       max-width: 1200px;
       width: 100%;
       margin: 0 auto;
     }
 
-    h1 { font-size: 22px; font-weight: 700; margin-bottom: 24px; }
-    h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 28px;
+      letter-spacing: -0.3px;
+    }
 
-    /* ── Cards (glassmorphism) ── */
+    h2 {
+      font-size: 11px;
+      font-weight: 500;
+      margin-bottom: 14px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* ── Cards ── */
     .card {
-      background: rgba(255,255,255,0.05);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.1);
+      background: var(--surface);
+      border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 24px;
     }
 
     /* ── Tables ── */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
+    table { width: 100%; border-collapse: collapse; }
 
     th {
       text-align: left;
-      padding: 10px 14px;
-      color: var(--muted);
-      font-weight: 600;
-      font-size: 12px;
+      padding: 10px 16px;
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 11px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
+      letter-spacing: 0.8px;
+      border-bottom: 1px solid var(--border);
     }
 
     td {
-      padding: 12px 14px;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
       vertical-align: middle;
+      font-size: 14px;
     }
 
     tr:last-child td { border-bottom: none; }
-    tr:hover td { background: rgba(255,255,255,0.04); }
+    tr:hover td { background: var(--surface-hover); }
 
     /* ── Badges ── */
     .badge {
-      display: inline-block;
-      padding: 3px 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
       border-radius: 20px;
       font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.4px;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
     }
 
-    .badge-green  { background: rgba(46,204,113,.15); color: var(--green); }
-    .badge-red    { background: rgba(231,76,60,.15);  color: var(--red); }
-    .badge-yellow { background: rgba(243,156,18,.15); color: var(--yellow); }
-    .badge-grey   { background: rgba(136,144,170,.12); color: var(--muted); }
+    .badge-green {
+      background: rgba(16,185,129,0.12);
+      color: var(--green);
+      box-shadow: 0 0 12px rgba(16,185,129,0.12);
+    }
+
+    .badge-red {
+      background: rgba(239,68,68,0.12);
+      color: var(--red);
+      box-shadow: 0 0 12px rgba(239,68,68,0.12);
+    }
+
+    .badge-amber {
+      background: rgba(245,158,11,0.12);
+      color: var(--amber);
+      box-shadow: 0 0 12px rgba(245,158,11,0.12);
+    }
+
+    .badge-blue {
+      background: rgba(59,130,246,0.12);
+      color: var(--accent);
+      box-shadow: 0 0 12px rgba(59,130,246,0.12);
+    }
+
+    .badge-grey {
+      background: rgba(100,116,139,0.1);
+      color: var(--text-muted);
+    }
 
     /* ── Buttons ── */
     .btn {
-      display: inline-block;
-      padding: 6px 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 16px;
       border-radius: var(--radius);
-      font-size: 12px;
-      font-weight: 600;
+      font-size: 13px;
+      font-weight: 500;
       cursor: pointer;
       border: none;
       text-decoration: none;
-      transition: opacity 0.15s, box-shadow 0.2s;
+      transition: box-shadow 0.2s, opacity 0.15s;
+      font-family: 'DM Sans', sans-serif;
     }
 
-    .btn:hover { opacity: 0.9; }
-    .btn-green { background: var(--green);  color: #fff; }
-    .btn-red   { background: var(--red);    color: #fff; }
-    .btn-blue  { background: var(--accent); color: #fff; }
-    .btn-green:hover { box-shadow: 0 0 14px rgba(46,204,113,0.45); }
-    .btn-red:hover   { box-shadow: 0 0 14px rgba(231,76,60,0.45); }
-    .btn-blue:hover  { box-shadow: 0 0 14px rgba(79,142,247,0.45); }
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-green:hover { box-shadow: 0 0 20px rgba(16,185,129,0.5); }
 
-    /* ── Flash messages ── */
+    .btn-red { background: var(--red); color: #fff; }
+    .btn-red:hover { box-shadow: 0 0 20px rgba(239,68,68,0.5); }
+
+    .btn-blue { background: var(--accent); color: #fff; }
+    .btn-blue:hover { box-shadow: 0 0 20px var(--accent-glow); }
+
+    /* ── Flash ── */
     .flash {
-      background: rgba(79,142,247,0.1);
+      background: rgba(59,130,246,0.08);
       border-left: 3px solid var(--accent);
-      padding: 10px 16px;
+      padding: 12px 18px;
       border-radius: var(--radius);
-      margin-bottom: 20px;
+      margin-bottom: 24px;
       font-size: 13px;
     }
 
-    /* ── Muted / helper text ── */
-    .muted { color: var(--muted); }
+    .muted { color: var(--text-muted); }
     .mono  { font-family: "SF Mono", "Fira Code", monospace; font-size: 12px; }
 
-    /* ── Mobile breakpoint ── */
+    /* ── Mobile ── */
     @media (max-width: 640px) {
-      nav {
-        padding: 0 16px;
-        gap: 0;
-      }
-
-      .nav-brand { flex: 1; }
-
-      .nav-links,
-      .nav-logout { display: none; }
-
-      .nav-toggle { display: block; }
-
-      main { padding: 20px 16px; }
-
-      h1 { font-size: 18px; margin-bottom: 18px; }
+      nav { padding: 0 20px; }
+      .nav-brand { margin-right: 0; }
+      .nav-links, .nav-logout { display: none; }
+      .nav-toggle { display: flex; }
+      main { padding: 24px 16px; }
+      h1 { font-size: 20px; margin-bottom: 20px; }
     }
   </style>
 </head>
 <body>
 
 <nav>
-  <a class="nav-brand" href="/">🛃 Importil <span>by Drivetech360</span></a>
+  <a class="nav-brand" href="/">
+    <span class="nav-brand-dot"></span>
+    Importil
+  </a>
   <div class="nav-links">
     <a href="/"         {% if request.path == '/'         %}class="active"{% endif %}>Dashboard</a>
     <a href="/users"    {% if request.path == '/users'    %}class="active"{% endif %}>Users</a>
@@ -307,7 +396,9 @@
     <a href="/settings" {% if request.path == '/settings' %}class="active"{% endif %}>Settings</a>
   </div>
   <div class="nav-logout"><a href="/logout">Logout</a></div>
-  <button class="nav-toggle" id="nav-toggle" aria-label="Open navigation">&#9776;</button>
+  <button class="nav-toggle" id="nav-toggle" aria-label="Open navigation">
+    <span></span><span></span><span></span>
+  </button>
 </nav>
 
 <div id="nav-overlay"></div>
@@ -342,11 +433,13 @@
     function openMenu() {
       menu.classList.add('open');
       overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
     }
 
     function closeMenu() {
       menu.classList.remove('open');
       overlay.classList.remove('open');
+      document.body.style.overflow = '';
     }
 
     toggle.addEventListener('click', function (e) {
@@ -357,7 +450,7 @@
     overlay.addEventListener('click', closeMenu);
 
     document.addEventListener('click', function (e) {
-      if (menu.classList.contains('open') && !menu.contains(e.target)) {
+      if (menu.classList.contains('open') && !menu.contains(e.target) && e.target !== toggle) {
         closeMenu();
       }
     });
