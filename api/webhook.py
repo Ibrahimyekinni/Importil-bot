@@ -71,6 +71,8 @@ async def setup_bot():
     # Text messages that are NOT commands (e.g. product names) — also routed to handle_check
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_check))
 
+    print(f"[webhook] Registered handlers: {application.handlers}")
+
     return application
 
 
