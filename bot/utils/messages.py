@@ -40,6 +40,11 @@ MESSAGES = {
         ),
         'analyzing_document': "📄 Reading document and checking compliance... please wait",
         'document_error': "⚠️ Sorry, I couldn't read that file. Please try a PDF or Word document, or just type the product details directly.",
+        'ask_importer_type': "Are you importing as a private person or a company?",
+        'ask_quantity': "How many units are you importing?",
+        'invalid_quantity': "⚠️ Please enter a valid whole number (e.g. 3).",
+        'private_limit_exceeded': "❌ Personal import is limited to 5 units maximum under Israeli law. We cannot process this request.",
+        'commercial_license_required': "❌ This quantity requires a periodic commercial license with a hardware token. Please contact the Ministry of Communications directly at *6621.",
         'new_user_admin': (
             "🆕 New importer registered!\n\n"
             "Name: @{username}\n"
@@ -88,6 +93,11 @@ MESSAGES = {
         ),
         'analyzing_document': "📄 קורא את המסמך ובודק תאימות... אנא המתן",
         'document_error': "⚠️ מצטער, לא הצלחתי לקרוא את הקובץ. אנא נסה PDF או מסמך Word, או פשוט הקלד את פרטי המוצר ישירות.",
+        'ask_importer_type': "האם אתה מייבא כאדם פרטי או כחברה?",
+        'ask_quantity': "כמה יחידות אתה מייבא?",
+        'invalid_quantity': "⚠️ אנא הזן מספר שלם תקין (לדוגמה: 3).",
+        'private_limit_exceeded': "❌ יבוא אישי מוגבל ל-5 יחידות לכל היותר על פי החוק הישראלי. לא ניתן לעבד בקשה זו.",
+        'commercial_license_required': "❌ כמות זו מצריכה רישיון מסחרי תקופתי עם אסימון חומרה. אנא פנה ישירות למשרד התקשורת בטלפון *6621.",
         'new_user_admin': (
             "🆕 New importer registered!\n\n"
             "Name: @{username}\n"
