@@ -1,7 +1,10 @@
+import logging
 import os
 import sys
 from datetime import datetime, timezone
 from functools import wraps
+
+import requests
 
 from flask import (
     Flask,
@@ -24,7 +27,7 @@ from bot.services.db_service import (
     update_user_language,
     get_user_language,
 )
-from config.settings import FLASK_SECRET_KEY, ADMIN_PASSWORD, ADMIN_TELEGRAM_ID
+from config.settings import FLASK_SECRET_KEY, ADMIN_PASSWORD, ADMIN_TELEGRAM_ID, TELEGRAM_BOT_TOKEN
 
 # ── App setup ────────────────────────────────────────────────────────────────
 
@@ -113,11 +116,25 @@ def users():
     return render_template("users.html", users=all_users)
 
 
+def _send_telegram_message(chat_id: int, text: str) -> None:
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    try:
+        resp = requests.post(url, json={"chat_id": chat_id, "text": text}, timeout=10)
+        resp.raise_for_status()
+    except Exception as exc:
+        logging.error("Failed to send Telegram message to %s: %s", chat_id, exc)
+
+
 @app.route("/approve/<int:telegram_id>", methods=["POST"])
 @require_login
 def approve(telegram_id):
-    """Approve a user and redirect back to users page."""
     approve_user(telegram_id)
+    _send_telegram_message(
+        telegram_id,
+        "✅ Great news! Your Importil access has been approved.\n\n"
+        "You can now send me any product name, photo, link or document to check "
+        "customs compliance into Israel. 🇮🇱\n\nTry it now!",
+    )
     flash(f"User {telegram_id} approved.")
     return redirect(url_for("users"))
 
@@ -125,8 +142,11 @@ def approve(telegram_id):
 @app.route("/revoke/<int:telegram_id>", methods=["POST"])
 @require_login
 def revoke(telegram_id):
-    """Revoke a user's access and redirect back to users page."""
     revoke_user(telegram_id)
+    _send_telegram_message(
+        telegram_id,
+        "❌ Your Importil access has been revoked. Contact Dekel for more information.",
+    )
     flash(f"User {telegram_id} revoked.")
     return redirect(url_for("users"))
 
