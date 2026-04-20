@@ -236,24 +236,27 @@
       status.className   = 'note-status saving';
 
       fetch('/users/' + id + '/note', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ note: note }),
+        method:      'POST',
+        credentials: 'same-origin',
+        headers:     { 'Content-Type': 'application/json' },
+        body:        JSON.stringify({ note: note }),
       })
-        .then(function (r) { return r.json(); })
+        .then(function (r) {
+          console.log('[note save] status:', r.status, 'for user', id);
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
         .then(function (data) {
-          if (data.ok) {
-            status.textContent = '✓ Saved';
-            status.className   = 'note-status saved';
-          } else {
-            throw new Error('not ok');
-          }
+          if (!data.ok) throw new Error('server returned ok:false');
+          status.textContent = '✓ Saved';
+          status.className   = 'note-status saved';
           setTimeout(function () {
             status.textContent = '';
             status.className   = 'note-status';
           }, 2000);
         })
-        .catch(function () {
+        .catch(function (err) {
+          console.error('[note save] error:', err);
           status.textContent = 'Error saving';
           status.className   = 'note-status error';
         });
