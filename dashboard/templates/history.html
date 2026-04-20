@@ -2,14 +2,49 @@
 {% block title %}Query History — Importil{% endblock %}
 
 {% block content %}
-<h1>History <span class="muted" style="font-size:16px;font-weight:300;font-family:'DM Sans',sans-serif;">({{ queries|length }})</span></h1>
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+  <h1 style="margin:0;">History <span class="muted" style="font-size:16px;font-weight:300;font-family:'DM Sans',sans-serif;">({{ queries|length }})</span></h1>
+  <a href="{{ url_for('export_queries') }}"
+     style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;background:var(--accent);color:#fff;border-radius:var(--radius);font-size:13px;font-weight:600;text-decoration:none;letter-spacing:.02em;transition:opacity .15s;">
+    ⬇ Export CSV
+  </a>
+</div>
 
 {% if queries %}
 
+<!-- Filter bar -->
+<div class="filter-bar">
+  <input
+    type="text"
+    id="filter-search"
+    class="filter-input"
+    placeholder="Search queries…"
+    autocomplete="off"
+    spellcheck="false"
+  >
+  <select id="filter-verdict" class="filter-select">
+    <option value="">All verdicts</option>
+    <option value="allowed">✅ Allowed</option>
+    <option value="rejected">❌ Rejected</option>
+    <option value="conditional">⚠️ Conditional</option>
+    <option value="exempt">🛡️ Exempt</option>
+    <option value="pending">⏳ Pending</option>
+  </select>
+  <div class="filter-dates">
+    <input type="date" id="filter-from" class="filter-input filter-date" title="From date">
+    <span class="filter-sep">→</span>
+    <input type="date" id="filter-to"   class="filter-input filter-date" title="To date">
+  </div>
+  <button type="button" id="filter-clear" class="filter-clear-btn">Clear</button>
+</div>
+
 <!-- Mobile: card list -->
-<div class="hist-list">
+<div class="hist-list" id="hist-list">
   {% for q in queries %}
-  <div class="hist-card">
+  <div class="hist-card"
+       data-content="{{ q.query_content | e | lower }}"
+       data-verdict="{{ q.verdict | lower }}"
+       data-ts="{{ q.timestamp.strftime('%Y-%m-%d') if q.timestamp else '' }}">
     <div class="hist-body">
       <div class="hist-query">
         {{ q.query_content[:75] }}{% if q.query_content and q.query_content|length > 75 %}…{% endif %}
@@ -49,9 +84,11 @@
         <th>Timestamp</th>
       </tr>
     </thead>
-    <tbody>
+    <tbody id="hist-tbody">
       {% for q in queries %}
-      <tr>
+      <tr data-content="{{ q.query_content | e | lower }}"
+          data-verdict="{{ q.verdict | lower }}"
+          data-ts="{{ q.timestamp.strftime('%Y-%m-%d') if q.timestamp else '' }}">
         <td class="mono">{{ q.telegram_id }}</td>
         <td>
           {% if q.query_type == 'photo' %}
@@ -88,6 +125,11 @@
   </div>
 </div>
 
+<!-- Shown when active filters match nothing -->
+<div id="filter-empty" class="card" style="display:none;">
+  <p class="muted">No queries match your filters.</p>
+</div>
+
 {% else %}
 <div class="card">
   <p class="muted">No queries recorded yet.</p>
@@ -95,14 +137,117 @@
 {% endif %}
 
 <style>
-  .hist-list { display: flex; flex-direction: column; gap: 8px; }
+  /* ── Layout ── */
+  .hist-list  { display: flex; flex-direction: column; gap: 8px; }
   .hist-table { display: none; }
 
   @media (min-width: 640px) {
-    .hist-list { display: none; }
+    .hist-list  { display: none; }
     .hist-table { display: block; }
   }
 
+  /* ── Filter bar ── */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .filter-input,
+  .filter-select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    color-scheme: dark;
+  }
+
+  .filter-input:focus,
+  .filter-select:focus {
+    border-color: rgba(59,130,246,0.5);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+  }
+
+  .filter-input::placeholder { color: var(--text-muted); }
+
+  /* search takes remaining width on desktop */
+  #filter-search { flex: 1; min-width: 160px; }
+
+  .filter-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+    cursor: pointer;
+    min-width: 148px;
+  }
+
+  .filter-select option {
+    background: #0d1520;
+    color: var(--text);
+  }
+
+  .filter-dates {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .filter-date {
+    width: 136px;
+    /* hide the calendar picker icon in webkit */
+    padding-right: 8px;
+  }
+
+  .filter-date::-webkit-calendar-picker-indicator {
+    filter: invert(0.5);
+    cursor: pointer;
+    opacity: 0.6;
+  }
+
+  .filter-date::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+
+  .filter-sep {
+    color: var(--text-muted);
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .filter-clear-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+    white-space: nowrap;
+  }
+
+  .filter-clear-btn:hover {
+    color: var(--text);
+    border-color: rgba(255,255,255,0.2);
+  }
+
+  @media (max-width: 640px) {
+    .filter-bar { gap: 6px; }
+    #filter-search { min-width: 100%; }
+    .filter-dates { width: 100%; }
+    .filter-date { flex: 1; width: auto; }
+  }
+
+  /* ── Cards ── */
   .hist-card {
     display: flex;
     align-items: center;
@@ -127,4 +272,62 @@
 
   .hist-meta { font-size: 12px; color: var(--text-muted); }
 </style>
+
+<script>
+(function () {
+  var searchEl  = document.getElementById('filter-search');
+  var verdictEl = document.getElementById('filter-verdict');
+  var fromEl    = document.getElementById('filter-from');
+  var toEl      = document.getElementById('filter-to');
+  var clearBtn  = document.getElementById('filter-clear');
+  var emptyMsg  = document.getElementById('filter-empty');
+
+  if (!searchEl) return; // no queries rendered
+
+  function applyFilters() {
+    var search  = searchEl.value.toLowerCase().trim();
+    var verdict = verdictEl.value.toLowerCase();
+    var from    = fromEl.value;  // 'YYYY-MM-DD' or ''
+    var to      = toEl.value;
+
+    function matches(el) {
+      var content = el.dataset.content || '';
+      var v       = el.dataset.verdict || '';
+      var ts      = el.dataset.ts      || '';
+      if (search  && content.indexOf(search) === -1) return false;
+      if (verdict && v !== verdict)                   return false;
+      if (from    && ts && ts < from)                 return false;
+      if (to      && ts && ts > to)                   return false;
+      return true;
+    }
+
+    var anyVisible = false;
+
+    document.querySelectorAll('.hist-card').forEach(function (card) {
+      var show = matches(card);
+      card.style.display = show ? '' : 'none';
+      if (show) anyVisible = true;
+    });
+
+    document.querySelectorAll('#hist-tbody tr').forEach(function (row) {
+      row.style.display = matches(row) ? '' : 'none';
+    });
+
+    if (emptyMsg) emptyMsg.style.display = anyVisible ? 'none' : '';
+  }
+
+  searchEl.addEventListener('input',  applyFilters);
+  verdictEl.addEventListener('change', applyFilters);
+  fromEl.addEventListener('change',   applyFilters);
+  toEl.addEventListener('change',     applyFilters);
+
+  clearBtn.addEventListener('click', function () {
+    searchEl.value  = '';
+    verdictEl.value = '';
+    fromEl.value    = '';
+    toEl.value      = '';
+    applyFilters();
+  });
+})();
+</script>
 {% endblock %}

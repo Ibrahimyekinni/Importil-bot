@@ -62,6 +62,9 @@ def create_tables():
             cur.execute("""
                 ALTER TABLE users ADD COLUMN IF NOT EXISTS conv_data TEXT DEFAULT NULL;
             """)
+            cur.execute("""
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS notes TEXT;
+            """)
         conn.commit()
 
 
@@ -264,6 +267,24 @@ def set_user_state(telegram_id, state, data=None):
                     SET conv_state = EXCLUDED.conv_state,
                         conv_data  = EXCLUDED.conv_data;
             """, (telegram_id, state, data))
+        conn.commit()
+
+
+def save_user_note(telegram_id, note):
+    """
+    Persists an admin note for the given user.
+    Passing an empty string clears the note.
+    Does nothing if the database is unreachable.
+    """
+    conn = get_connection()
+    if conn is None:
+        return
+
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE users SET notes = %s WHERE telegram_id = %s;
+            """, (note or None, telegram_id))
         conn.commit()
 
 

@@ -6,6 +6,9 @@ from functools import wraps
 
 import requests
 
+import csv
+import io
+
 from flask import (
     Flask,
     render_template,
@@ -14,6 +17,8 @@ from flask import (
     url_for,
     session,
     flash,
+    make_response,
+    jsonify,
 )
 
 # Ensure project root is on sys.path so bot/ and config/ are importable
@@ -26,6 +31,7 @@ from bot.services.db_service import (
     revoke_user,
     update_user_language,
     get_user_language,
+    save_user_note,
 )
 from config.settings import FLASK_SECRET_KEY, ADMIN_PASSWORD, ADMIN_TELEGRAM_ID, TELEGRAM_BOT_TOKEN
 
@@ -179,6 +185,41 @@ def settings_language():
     label = "English" if language == "en" else "Hebrew (עברית)"
     flash(f"Language updated to {label}.")
     return redirect(url_for("settings"))
+
+
+@app.route("/users/<int:telegram_id>/note", methods=["POST"])
+@require_login
+def save_note(telegram_id):
+    """Persist an admin note for a user. Expects JSON body {note: string}."""
+    data = request.get_json(silent=True) or {}
+    note = data.get("note", "")
+    save_user_note(telegram_id, note)
+    return jsonify({"ok": True})
+
+
+@app.route("/export/queries")
+@require_login
+def export_queries():
+    """Return all queries as a downloadable CSV file."""
+    all_queries = get_all_queries() or []
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["id", "telegram_id", "query_type", "query_content", "verdict", "timestamp"])
+    for q in all_queries:
+        writer.writerow([
+            q.get("id", ""),
+            q.get("telegram_id", ""),
+            q.get("query_type", ""),
+            q.get("query_content", ""),
+            q.get("verdict", ""),
+            q.get("timestamp", ""),
+        ])
+
+    response = make_response(buf.getvalue())
+    response.headers["Content-Type"] = "text/csv; charset=utf-8"
+    response.headers["Content-Disposition"] = "attachment; filename=importil_queries.csv"
+    return response
 
 
 # ── Vercel / local entry point ───────────────────────────────────────────────
