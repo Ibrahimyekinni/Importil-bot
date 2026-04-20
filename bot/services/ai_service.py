@@ -4,6 +4,10 @@ import traceback
 
 from groq import Groq
 
+
+class AIServiceError(Exception):
+    """Raised when the AI backend fails. Callers catch this and show a bilingual error."""
+
 from config.settings import GROQ_API_KEY
 from bot.services.drive_service import get_all_documents_text
 
@@ -253,10 +257,7 @@ Please provide a full compliance verdict using the required format:
 
     except Exception as e:
         print(f"[ai_service] Error in analyze_text_query: {e}")
-        return (
-            "⚠️ Sorry, I couldn't complete the compliance check right now. "
-            "Please try again in a moment or contact support."
-        )
+        raise AIServiceError("ai_unavailable") from e
 
 
 def analyze_image_query(image_bytes, additional_text="", lang_instruction=""):
@@ -334,10 +335,7 @@ Please do the following in order:
     except Exception as e:
         print(f"[ai_service] Error in analyze_image_query: {type(e).__name__}: {e}")
         traceback.print_exc()
-        return (
-            "⚠️ Sorry, I couldn't analyse the image right now. "
-            "Please try again or send the product name as text instead."
-        )
+        raise AIServiceError("ai_unavailable") from e
 
 
 def format_verdict(raw_response):

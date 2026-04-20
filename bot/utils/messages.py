@@ -132,3 +132,85 @@ def get_message(key, language='en', **kwargs):
     """
     msg = MESSAGES.get(language, MESSAGES['en']).get(key, MESSAGES['en'].get(key, ''))
     return msg.format(**kwargs) if kwargs else msg
+
+
+# ── Structured error messages ─────────────────────────────────────────────────
+# Keyed by error_type. Each maps to a user-safe bilingual string.
+# Raw Python errors are never shown; callers pass one of these keys instead.
+
+_ERROR_MESSAGES = {
+    'ai_unavailable': {
+        'en': (
+            "⚠️ Our AI analysis service is temporarily unavailable. "
+            "Please try again in a few minutes."
+        ),
+        'he': (
+            "⚠️ שירות הניתוח שלנו אינו זמין כרגע. "
+            "אנא נסה שוב בעוד מספר דקות."
+        ),
+    },
+    'invalid_input': {
+        'en': (
+            "⚠️ Please send a product name or description so I can check it. "
+            "Your message was too short to analyse."
+        ),
+        'he': (
+            "⚠️ אנא שלח שם מוצר או תיאור כדי שאוכל לבדוק. "
+            "ההודעה שלך קצרה מדי לניתוח."
+        ),
+    },
+    'unsupported_file': {
+        'en': (
+            "⚠️ I can only read PDF and Word (.docx) files. "
+            "Please send a supported file type, or type the product details directly."
+        ),
+        'he': (
+            "⚠️ אני יכול לקרוא רק קבצי PDF ו-Word (docx). "
+            "אנא שלח סוג קובץ נתמך, או הקלד את פרטי המוצר ישירות."
+        ),
+    },
+    'url_fetch_failed': {
+        'en': (
+            "⚠️ I couldn't retrieve content from that URL — the site may block "
+            "automated reading.\n\n"
+            "💡 Copy the product name and specs directly into the chat and I'll "
+            "give you an instant verdict."
+        ),
+        'he': (
+            "⚠️ לא הצלחתי לאחזר תוכן מה-URL הזה — האתר אולי חוסם קריאה אוטומטית.\n\n"
+            "💡 העתק את שם המוצר והמפרטים ישירות לצ'אט ואתן לך פסיקה מיידית."
+        ),
+    },
+    'document_too_large': {
+        'en': (
+            "⚠️ That file is too large to process (maximum 20 MB). "
+            "Please send a smaller file or paste the key product specs as text."
+        ),
+        'he': (
+            "⚠️ הקובץ גדול מדי לעיבוד (מקסימום 20 MB). "
+            "אנא שלח קובץ קטן יותר או הדבק את מפרטי המוצר העיקריים כטקסט."
+        ),
+    },
+}
+
+_FALLBACK_ERROR = {
+    'en': "⚠️ Something went wrong. Please try again or send the product name as text.",
+    'he': "⚠️ משהו השתבש. אנא נסה שוב או שלח את שם המוצר כטקסט.",
+}
+
+
+def get_error_message(error_type, language='en'):
+    """
+    Returns a user-safe, bilingual error string for the given error_type.
+    Falls back to English, then to a generic message if the type is unknown.
+    Never exposes raw Python exceptions to the caller.
+
+    Supported error_type values:
+        ai_unavailable    — Groq / AI backend is down or timed out
+        invalid_input     — query is empty or too short to analyse
+        unsupported_file  — file MIME type is not PDF or DOCX
+        url_fetch_failed  — neither meta-tag nor Firecrawl could read the URL
+        document_too_large — file exceeds the 20 MB processing limit
+    """
+    entry = _ERROR_MESSAGES.get(error_type, _FALLBACK_ERROR)
+    return entry.get(language) or entry.get('en') or _FALLBACK_ERROR['en']

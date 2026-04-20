@@ -3,14 +3,16 @@ import io
 import traceback
 
 from bot.services.db_service import is_approved, save_query, get_user_language
-from bot.services.ai_service import analyze_text_query
-from bot.utils.messages import get_message
+from bot.services.ai_service import analyze_text_query, AIServiceError
+from bot.utils.messages import get_message, get_error_message
 from bot.handlers.check import keep_typing, extract_verdict
 
 SUPPORTED_MIME_TYPES = {
     "application/pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
+
+MAX_FILE_BYTES = 20 * 1024 * 1024  # 20 MB
 
 
 def _extract_text_from_pdf(file_bytes):
@@ -31,11 +33,11 @@ async def handle_document_check(update, context):
     Extracts text and feeds it into the same compliance check as text queries.
     Logged as query_type='document'.
     """
-    try:
-        telegram_id = update.effective_user.id
-        chat_id     = update.effective_chat.id
-        language    = get_user_language(telegram_id)
+    telegram_id = update.effective_user.id
+    chat_id     = update.effective_chat.id
+    language    = get_user_language(telegram_id)
 
+    try:
         if not is_approved(telegram_id):
             await update.message.reply_text(get_message('no_access', language))
             return
@@ -43,11 +45,14 @@ async def handle_document_check(update, context):
         document  = update.message.document
         mime_type = document.mime_type or ""
 
-        print(f"[document_check] triggered for file: {document.file_name}")
-        print(f"[document_check] mime_type: {document.mime_type}")
+        print(f"[document_check] file: {document.file_name}  mime: {mime_type}  size: {document.file_size}")
 
         if mime_type not in SUPPORTED_MIME_TYPES:
-            await update.message.reply_text(get_message('document_error', language))
+            await update.message.reply_text(get_error_message('unsupported_file', language))
+            return
+
+        if document.file_size and document.file_size > MAX_FILE_BYTES:
+            await update.message.reply_text(get_error_message('document_too_large', language))
             return
 
         await update.message.reply_text(get_message('analyzing_document', language))
@@ -70,7 +75,8 @@ async def handle_document_check(update, context):
 
             text = text.strip()
             if not text or len(text) < 20:
-                raise ValueError("Extracted text is too short to be useful")
+                await update.message.reply_text(get_message('document_error', language))
+                return
 
             filename = document.file_name or "document"
             product_description = (
@@ -95,13 +101,15 @@ async def handle_document_check(update, context):
 
             await update.message.reply_text(response, parse_mode="Markdown")
 
+        except AIServiceError:
+            await update.message.reply_text(get_error_message('ai_unavailable', language))
         except Exception:
             traceback.print_exc()
             await update.message.reply_text(get_message('document_error', language))
-
         finally:
             stop_event.set()
             typing_task.cancel()
 
-    except Exception as e:
-        print(f"[document_check] ERROR: {e}")
+    except Exception:
+        traceback.print_exc()
+        await update.message.reply_text(get_message('document_error', language))

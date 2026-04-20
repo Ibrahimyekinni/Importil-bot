@@ -2,8 +2,8 @@ import asyncio
 import traceback
 
 from bot.services.db_service import is_approved, save_query, get_user_language
-from bot.services.ai_service import analyze_text_query, analyze_image_query
-from bot.utils.messages import get_message
+from bot.services.ai_service import analyze_text_query, analyze_image_query, AIServiceError
+from bot.utils.messages import get_message, get_error_message
 from bot.handlers.url_check import extract_url, fetch_product_content, is_low_confidence
 
 # Per-user conversation history for CONDITIONAL follow-ups.
@@ -104,6 +104,8 @@ async def handle_check(update, context):
 
             await update.message.reply_text(response, parse_mode="Markdown")
 
+        except AIServiceError:
+            await update.message.reply_text(get_error_message('ai_unavailable', language))
         except Exception:
             traceback.print_exc()
             await update.message.reply_text(get_message('image_error', language))
@@ -115,7 +117,12 @@ async def handle_check(update, context):
     elif update.message.text:
         # ── Text query ───────────────────────────────────────────────────────
 
-        query_content = update.message.text
+        query_content = update.message.text.strip()
+
+        if len(query_content) < 3:
+            await update.message.reply_text(get_error_message('invalid_input', language))
+            return
+
         url = extract_url(query_content)
 
         if url:
@@ -182,6 +189,8 @@ async def handle_check(update, context):
                     )
                     await update.message.reply_text(response, parse_mode="Markdown")
 
+            except AIServiceError:
+                await update.message.reply_text(get_error_message('ai_unavailable', language))
             except Exception:
                 traceback.print_exc()
                 await update.message.reply_text(get_message('link_error', language))
@@ -241,6 +250,8 @@ async def handle_check(update, context):
                     {"role": "assistant", "content": response}
                 )
 
+        except AIServiceError:
+            await update.message.reply_text(get_error_message('ai_unavailable', language))
         except Exception:
             traceback.print_exc()
             await update.message.reply_text(get_message('error', language))
