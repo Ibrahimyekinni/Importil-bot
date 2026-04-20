@@ -25,6 +25,7 @@ from flask import (
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from bot.services.db_service import (
+    create_tables,
     get_all_users,
     get_all_queries,
     approve_user,
@@ -49,6 +50,13 @@ app = Flask(
     ),
 )
 app.secret_key = FLASK_SECRET_KEY
+
+# Run all DB migrations at dashboard startup so columns like `notes` exist
+# even if the bot webhook hasn't been hit yet.
+try:
+    create_tables()
+except Exception as _e:
+    logging.warning("create_tables() failed at dashboard startup: %s", _e)
 
 
 # ── Auth decorator ───────────────────────────────────────────────────────────
@@ -191,10 +199,14 @@ def settings_language():
 @require_login
 def save_note(telegram_id):
     """Persist an admin note for a user. Expects JSON body {note: string}."""
-    data = request.get_json(silent=True) or {}
-    note = data.get("note", "")
-    save_user_note(telegram_id, note)
-    return jsonify({"ok": True})
+    try:
+        data = request.get_json(silent=True) or {}
+        note = data.get("note", "")
+        save_user_note(telegram_id, note)
+        return jsonify({"ok": True})
+    except Exception as exc:
+        logging.exception("save_note failed for telegram_id=%s", telegram_id)
+        return jsonify({"ok": False, "error": str(exc)}), 500
 
 
 @app.route("/export/queries")
