@@ -237,6 +237,24 @@ def update_user_language(telegram_id, language):
         conn.commit()
 
 
+def get_query_count(telegram_id):
+    """
+    Returns the total number of compliance queries the user has submitted.
+    Returns 0 if the database is unreachable.
+    """
+    conn = get_connection()
+    if conn is None:
+        return 0
+
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT COUNT(*) FROM queries WHERE telegram_id = %s;",
+                (telegram_id,)
+            )
+            return cur.fetchone()[0]
+
+
 def get_user_language(telegram_id):
     """
     Returns the user's preferred language ('en' or 'he').

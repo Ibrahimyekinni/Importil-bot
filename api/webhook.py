@@ -21,6 +21,7 @@ from bot.handlers.start import handle_start
 from bot.handlers.help import handle_help
 from bot.handlers.link import handle_link
 from bot.handlers.refresh import handle_refresh
+from bot.handlers.status import handle_status
 from bot.handlers.language import handle_language_command, handle_language_callback
 from bot.handlers.track import handle_track, handle_track_callback
 from bot.services.db_service import create_tables
@@ -57,6 +58,9 @@ async def setup_bot():
 
     # /refresh — admin-only: clears and re-fetches the Drive document cache
     application.add_handler(CommandHandler("refresh", handle_refresh))
+
+    # /status — shows bot health, subscription status, language, and query count
+    application.add_handler(CommandHandler("status", handle_status))
 
     # Inline keyboard callbacks for language selection (lang_en / lang_he)
     application.add_handler(CallbackQueryHandler(handle_language_callback, pattern="^lang_"))

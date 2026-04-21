@@ -104,8 +104,8 @@ async def handle_check(update, context):
 
             await update.message.reply_text(response, parse_mode="Markdown")
 
-        except AIServiceError:
-            await update.message.reply_text(get_error_message('ai_unavailable', language))
+        except AIServiceError as e:
+            await update.message.reply_text(get_error_message(str(e), language))
         except Exception:
             traceback.print_exc()
             await update.message.reply_text(get_message('image_error', language))
@@ -250,8 +250,8 @@ async def handle_check(update, context):
                     {"role": "assistant", "content": response}
                 )
 
-        except AIServiceError:
-            await update.message.reply_text(get_error_message('ai_unavailable', language))
+        except AIServiceError as e:
+            await update.message.reply_text(get_error_message(str(e), language))
         except Exception:
             traceback.print_exc()
             await update.message.reply_text(get_message('error', language))

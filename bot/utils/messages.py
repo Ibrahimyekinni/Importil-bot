@@ -35,6 +35,7 @@ MESSAGES = {
             "/start - Register or check your status\n"
             "/link your@email.com - Link your email\n"
             "/language - Change language\n"
+            "/status - Check your account & bot status\n"
             "/help - Show this message\n\n"
             "Once approved, send me a product name or photo and I'll check if it's allowed into Israel. 🇮🇱"
         ),
@@ -53,6 +54,13 @@ MESSAGES = {
             "customs if asked.\n\n"
             "📋 Exemption basis: {category}\n\n"
             "💡 Keep a copy of your purchase invoice as supporting documentation."
+        ),
+        'status': (
+            "🤖 *Importil — Status*\n\n"
+            "🔌 Bot: ✅ Online\n"
+            "🔐 Access: {access_status}\n"
+            "🌐 Language: {language_label}\n"
+            "📊 Queries run: {query_count}"
         ),
         'new_user_admin': (
             "🆕 New importer registered!\n\n"
@@ -97,6 +105,7 @@ MESSAGES = {
             "/start - הרשמה או בדיקת סטטוס\n"
             "/link your@email.com - קישור האימייל שלך\n"
             "/language - שינוי שפה\n"
+            "/status - בדוק את סטטוס החשבון והבוט\n"
             "/help - הצג הודעה זו\n\n"
             "לאחר אישור, שלח שם מוצר או תמונה ואבדוק אם מותר לייבא לישראל. 🇮🇱"
         ),
@@ -113,6 +122,13 @@ MESSAGES = {
             "אינך צריך להגיש כל בקשה. פשוט הצג הודעה זו לפקיד המכס אם תתבקש.\n\n"
             "📋 בסיס הפטור: {category}\n\n"
             "💡 שמור עותק של חשבונית הרכישה שלך כתיעוד תומך."
+        ),
+        'status': (
+            "🤖 *Importil — סטטוס*\n\n"
+            "🔌 בוט: ✅ פעיל\n"
+            "🔐 גישה: {access_status}\n"
+            "🌐 שפה: {language_label}\n"
+            "📊 שאילתות שבוצעו: {query_count}"
         ),
         'new_user_admin': (
             "🆕 New importer registered!\n\n"
@@ -191,6 +207,16 @@ _ERROR_MESSAGES = {
             "אנא שלח קובץ קטן יותר או הדבק את מפרטי המוצר העיקריים כטקסט."
         ),
     },
+    'ai_timeout': {
+        'en': (
+            "⏱️ The analysis is taking longer than expected. "
+            "Please try again in a moment."
+        ),
+        'he': (
+            "⏱️ הניתוח לוקח יותר זמן מהצפוי. "
+            "אנא נסה שוב בעוד רגע."
+        ),
+    },
 }
 
 _FALLBACK_ERROR = {
@@ -206,7 +232,8 @@ def get_error_message(error_type, language='en'):
     Never exposes raw Python exceptions to the caller.
 
     Supported error_type values:
-        ai_unavailable    — Groq / AI backend is down or timed out
+        ai_unavailable    — Groq / AI backend is down or returned an error
+        ai_timeout        — Groq call exceeded the 30-second timeout
         invalid_input     — query is empty or too short to analyse
         unsupported_file  — file MIME type is not PDF or DOCX
         url_fetch_failed  — neither meta-tag nor Firecrawl could read the URL

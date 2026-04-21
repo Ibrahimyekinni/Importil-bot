@@ -2,7 +2,7 @@ import base64
 import io
 import traceback
 
-from groq import Groq
+from groq import Groq, APITimeoutError
 
 
 class AIServiceError(Exception):
@@ -249,12 +249,16 @@ Please provide a full compliance verdict using the required format:
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user",   "content": user_message},
-            ]
+            ],
+            timeout=30,
         )
 
         ai_response = format_verdict(response.choices[0].message.content)
         return normalize_frequencies(product_description, ai_response)
 
+    except APITimeoutError as e:
+        print(f"[ai_service] Timeout in analyze_text_query: {e}")
+        raise AIServiceError("ai_timeout") from e
     except Exception as e:
         print(f"[ai_service] Error in analyze_text_query: {e}")
         raise AIServiceError("ai_unavailable") from e
@@ -326,12 +330,16 @@ Please do the following in order:
                         {"type": "text",      "text": text_prompt},
                     ],
                 },
-            ]
+            ],
+            timeout=30,
         )
 
         ai_response = format_verdict(response.choices[0].message.content)
         return normalize_frequencies(additional_text, ai_response)
 
+    except APITimeoutError as e:
+        print(f"[ai_service] Timeout in analyze_image_query: {e}")
+        raise AIServiceError("ai_timeout") from e
     except Exception as e:
         print(f"[ai_service] Error in analyze_image_query: {type(e).__name__}: {e}")
         traceback.print_exc()
