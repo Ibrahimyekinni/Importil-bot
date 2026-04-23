@@ -10,6 +10,37 @@ from bot.services.db_service import (
 )
 from bot.utils.messages import get_message, get_error_message
 
+
+def split_message(text, max_length=600):
+    """Split text at natural boundaries (paragraph → newline → sentence end). Never mid-word."""
+    if len(text) <= max_length:
+        return [text]
+    chunks = []
+    remaining = text
+    while len(remaining) > max_length:
+        chunk = remaining[:max_length]
+        pos = chunk.rfind('\n\n')
+        if pos > 0:
+            chunks.append(remaining[:pos])
+            remaining = remaining[pos + 2:].lstrip()
+            continue
+        pos = chunk.rfind('\n')
+        if pos > 0:
+            chunks.append(remaining[:pos])
+            remaining = remaining[pos + 1:].lstrip()
+            continue
+        best = max(chunk.rfind('.'), chunk.rfind('!'), chunk.rfind('?'))
+        if best > 0:
+            chunks.append(remaining[:best + 1])
+            remaining = remaining[best + 1:].lstrip()
+            continue
+        chunks.append(chunk)
+        remaining = remaining[max_length:].lstrip()
+    if remaining:
+        chunks.append(remaining)
+    return chunks
+
+
 # (label shown in the exemption message, list of lowercase keywords to match)
 _EXEMPT_CATEGORIES = [
     (
@@ -130,13 +161,14 @@ async def handle_track(update, context):
                 return
 
             caption = update.message.caption or ""
-            await update.message.reply_text(get_message('analyzing_image', language))
+            proc_msg = await update.message.reply_text(get_message('analyzing_image', language))
 
             stop_event  = asyncio.Event()
             typing_task = asyncio.create_task(
                 keep_typing(context.bot, update.effective_chat.id, stop_event)
             )
             try:
+                await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
                 response = analyze_image_query(
                     img_bytes,
                     additional_text=caption,
@@ -155,7 +187,15 @@ async def handle_track(update, context):
                 history.append({"role": "assistant",  "content": response})
                 data['history'] = history[-10:]
                 set_user_state(telegram_id, 'AWAITING_FOLLOWUP', json.dumps(data))
-                await update.message.reply_text(response, parse_mode="Markdown")
+                chunks = split_message(response)
+                for i, chunk in enumerate(chunks):
+                    await context.bot.send_message(chat_id=update.effective_chat.id, text=chunk, parse_mode="Markdown")
+                    if i < len(chunks) - 1:
+                        await asyncio.sleep(0.3)
+                try:
+                    await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=proc_msg.message_id)
+                except Exception:
+                    pass
             except AIServiceError as e:
                 await update.message.reply_text(get_error_message(str(e), language))
             except Exception:
@@ -201,6 +241,7 @@ async def handle_track(update, context):
                     f"The following product information was extracted from a document ({filename}):\n\n"
                     f"{text[:8000]}"
                 )
+                await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
                 response = analyze_text_query(
                     product_description,
                     conversation_history=history,
@@ -218,7 +259,11 @@ async def handle_track(update, context):
                 history.append({"role": "assistant",  "content": response})
                 data['history'] = history[-10:]
                 set_user_state(telegram_id, 'AWAITING_FOLLOWUP', json.dumps(data))
-                await update.message.reply_text(response, parse_mode="Markdown")
+                chunks = split_message(response)
+                for i, chunk in enumerate(chunks):
+                    await context.bot.send_message(chat_id=update.effective_chat.id, text=chunk, parse_mode="Markdown")
+                    if i < len(chunks) - 1:
+                        await asyncio.sleep(0.3)
             except AIServiceError as e:
                 await update.message.reply_text(get_error_message(str(e), language))
             except Exception:
@@ -234,13 +279,14 @@ async def handle_track(update, context):
                 await update.message.reply_text(get_error_message('invalid_input', language))
                 return
 
-            await update.message.reply_text(get_message('analyzing_followup', language))
+            proc_msg = await update.message.reply_text(get_message('analyzing_followup', language))
 
             stop_event  = asyncio.Event()
             typing_task = asyncio.create_task(
                 keep_typing(context.bot, update.effective_chat.id, stop_event)
             )
             try:
+                await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
                 response = analyze_followup_query(
                     text,
                     conversation_history=history,
@@ -257,7 +303,15 @@ async def handle_track(update, context):
                 history.append({"role": "assistant",  "content": response})
                 data['history'] = history[-10:]
                 set_user_state(telegram_id, 'AWAITING_FOLLOWUP', json.dumps(data))
-                await update.message.reply_text(response, parse_mode="Markdown")
+                chunks = split_message(response)
+                for i, chunk in enumerate(chunks):
+                    await context.bot.send_message(chat_id=update.effective_chat.id, text=chunk, parse_mode="Markdown")
+                    if i < len(chunks) - 1:
+                        await asyncio.sleep(0.3)
+                try:
+                    await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=proc_msg.message_id)
+                except Exception:
+                    pass
             except AIServiceError as e:
                 await update.message.reply_text(get_error_message(str(e), language))
             except Exception:
