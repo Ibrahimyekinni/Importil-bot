@@ -267,36 +267,32 @@ Please provide a full compliance verdict using the required format:
 def analyze_image_query(image_bytes, additional_text="", lang_instruction=""):
     """
     Analyses a product image against Israeli customs compliance rules using
-    Groq's vision model (llama-3.2-90b-vision-preview).
+    Groq's vision model (llama-4-scout).
 
     additional_text   — optional caption the user sent alongside the photo.
     lang_instruction  — e.g. "Respond in Hebrew (עברית)." appended to the prompt.
 
-    Returns the formatted verdict string, or a friendly error message on failure.
+    Returns the formatted verdict string, or raises AIServiceError on failure.
     """
     try:
-        client  = get_client()
-        context = get_compliance_context()
+        client = get_client()
 
         # Ensure image_bytes is raw bytes before encoding
         if hasattr(image_bytes, "read"):
             image_bytes = image_bytes.read()
+
+        print(f"[ai_service] analyze_image_query: image size={len(image_bytes)} bytes, model={VISION_MODEL}")
+
         b64_image      = base64.b64encode(image_bytes).decode("utf-8")
         image_data_url = f"data:image/jpeg;base64,{b64_image}"
 
-        context_block = (
-            context
-            if context
-            else "No compliance documents available. Use your general knowledge and note this limitation."
-        )
-
         caption_line = f'They also wrote: "{additional_text}"' if additional_text else ""
 
-        text_prompt = f"""--- CONTEXT ---
-{context_block}
---- END CONTEXT ---
-
-IMAGE ANALYSIS TASK:
+        # Do NOT inject the Drive compliance context here — the SYSTEM_PROMPT already
+        # contains every rule and the image itself already consumes significant tokens.
+        # Adding thousands of Drive-doc tokens on top pushes the call over the model's
+        # context limit, which is the root cause of silent vision failures.
+        text_prompt = f"""IMAGE ANALYSIS TASK:
 The user has uploaded a photo of a product they wish to import into Israel.
 {caption_line}
 
@@ -331,10 +327,11 @@ Please do the following in order:
                     ],
                 },
             ],
-            timeout=30,
+            timeout=60,
         )
 
         ai_response = format_verdict(response.choices[0].message.content)
+        print(f"[ai_service] analyze_image_query: success, response length={len(ai_response)}")
         return normalize_frequencies(additional_text, ai_response)
 
     except APITimeoutError as e:
