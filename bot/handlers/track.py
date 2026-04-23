@@ -1,3 +1,5 @@
+import asyncio
+import base64
 import json
 import traceback
 
@@ -6,7 +8,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from bot.services.db_service import (
     get_user, set_user_state, save_query,
 )
-from bot.utils.messages import get_message
+from bot.utils.messages import get_message, get_error_message
 
 # (label shown in the exemption message, list of lowercase keywords to match)
 _EXEMPT_CATEGORIES = [
@@ -156,14 +158,64 @@ async def handle_track(update, context):
                 await update.message.reply_text(msg)
                 return
 
-            from bot.handlers.check import handle_check
-            from bot.handlers.document_check import handle_document_check
+            image_b64 = data.get('image_b64')
 
-            original_update = Update.de_json(original_update_data, context.bot)
-            if original_update.message and original_update.message.document:
-                await handle_document_check(original_update, context)
+            if image_b64:
+                # Photo query — use bytes downloaded at message-receipt time.
+                # Re-downloading via Update.de_json + get_file produces empty bytes
+                # in the serverless env, causing Groq to report "image not provided".
+                from bot.services.ai_service import analyze_image_query, AIServiceError
+                from bot.handlers.check import keep_typing, extract_verdict
+
+                caption = (original_update_data.get('message') or {}).get('caption') or ''
+                lang_instruction = (
+                    "Respond in Hebrew (עברית)." if language == "he" else "Respond in English."
+                )
+                photo_list   = (original_update_data.get('message') or {}).get('photo') or []
+                query_content = f"photo:{photo_list[-1].get('file_id', '')}" if photo_list else "photo"
+
+                await update.message.reply_text(get_message('analyzing_image', language))
+
+                stop_event  = asyncio.Event()
+                typing_task = asyncio.create_task(
+                    keep_typing(context.bot, update.effective_chat.id, stop_event)
+                )
+                try:
+                    img_bytes = base64.b64decode(image_b64)
+                    print(f"[track] calling analyze_image_query with {len(img_bytes)} bytes")
+                    response = analyze_image_query(
+                        img_bytes,
+                        additional_text=caption,
+                        lang_instruction=lang_instruction,
+                    )
+                    verdict = extract_verdict(response)
+                    save_query(
+                        telegram_id=telegram_id,
+                        query_type='photo',
+                        query_content=query_content,
+                        verdict=verdict,
+                        full_response=response,
+                    )
+                    await update.message.reply_text(response, parse_mode="Markdown")
+                except AIServiceError as e:
+                    await update.message.reply_text(get_error_message(str(e), language))
+                except Exception:
+                    traceback.print_exc()
+                    await update.message.reply_text(get_message('image_error', language))
+                finally:
+                    stop_event.set()
+                    typing_task.cancel()
+
             else:
-                await handle_check(original_update, context)
+                # Text or document query — replay through the standard handlers.
+                from bot.handlers.check import handle_check
+                from bot.handlers.document_check import handle_document_check
+
+                original_update = Update.de_json(original_update_data, context.bot)
+                if original_update.message and original_update.message.document:
+                    await handle_document_check(original_update, context)
+                else:
+                    await handle_check(original_update, context)
 
     elif conv_state == 'ASK_TYPE':
         keyboard = [[
@@ -176,8 +228,24 @@ async def handle_track(update, context):
         )
 
     else:
-        # conv_state is None (or unexpected) → start a fresh classification flow
+        # conv_state is None (or unexpected) → start a fresh classification flow.
         data = {"update": update.to_dict()}
+
+        # For photo messages, download the bytes NOW and store them as base64 in
+        # conv_data. Relying on file_id to re-download later (via Update.de_json +
+        # get_file) produces empty or invalid bytes in the serverless environment,
+        # which causes Groq to receive an empty image_url and reply "image not provided".
+        if update.message and update.message.photo:
+            try:
+                photo   = update.message.photo[-1]
+                tg_file = await context.bot.get_file(photo.file_id)
+                img_bytes = bytes(await tg_file.download_as_bytearray())
+                data['image_b64'] = base64.b64encode(img_bytes).decode('utf-8')
+                print(f"[track] pre-downloaded photo: {len(img_bytes)} bytes stored in conv_data")
+            except Exception as e:
+                print(f"[track] photo pre-download failed: {type(e).__name__}: {e}")
+                traceback.print_exc()
+
         try:
             set_user_state(telegram_id, 'ASK_TYPE', json.dumps(data))
         except Exception as e:
