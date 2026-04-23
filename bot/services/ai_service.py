@@ -205,6 +205,9 @@ def _build_history_block(conversation_history):
     return "\n".join(lines)
 
 
+FOLLOWUP_SYSTEM_PROMPT = """You are a compliance assistant. A verdict has already been given for this product. Answer the user's follow-up question directly using the prior verdict and context as settled fact. Do NOT re-run a compliance analysis. Do NOT return a new verdict block. Just answer the question conversationally and helpfully based on what was already determined."""
+
+
 def analyze_text_query(product_description, conversation_history=None, lang_instruction=""):
     """
     Analyses a text-based product query against Israeli customs compliance rules.
@@ -228,6 +231,7 @@ def analyze_text_query(product_description, conversation_history=None, lang_inst
         )
 
         history_block = _build_history_block(conversation_history)
+        print(f"[ai_service] analyze_text_query: history_entries={len(conversation_history or [])}, history_block_empty={not history_block}")
 
         user_message = f"""--- CONTEXT ---
 {context_block}
@@ -268,6 +272,53 @@ Please provide a full compliance verdict using the required format:
         raise AIServiceError("ai_timeout") from e
     except Exception as e:
         print(f"[ai_service] Error in analyze_text_query: {e}")
+        raise AIServiceError("ai_unavailable") from e
+
+
+def analyze_followup_query(user_question, conversation_history, lang_instruction=""):
+    """
+    Handles a follow-up question after a verdict has already been given.
+    Uses FOLLOWUP_SYSTEM_PROMPT so the AI answers conversationally without
+    re-running a compliance analysis or returning a new verdict block.
+
+    conversation_history — list of prior {'role', 'content'} dicts (the prior
+    verdict exchange). Injected as PRIOR CONVERSATION CONTEXT before the question.
+    """
+    try:
+        client = get_client()
+
+        history_block = _build_history_block(conversation_history)
+        print(
+            f"[ai_service] analyze_followup_query: history_entries={len(conversation_history or [])}, "
+            f"history_block_empty={not history_block}, question={repr(user_question[:100])}"
+        )
+
+        prior_context = (
+            f"--- PRIOR CONVERSATION CONTEXT ---\n{history_block}\n--- END OF PRIOR CONTEXT ---\n\n"
+            if history_block
+            else ""
+        )
+
+        user_message = f"""{prior_context}FOLLOW-UP QUESTION:
+{user_question}
+{lang_instruction}"""
+
+        response = client.chat.completions.create(
+            model=TEXT_MODEL,
+            messages=[
+                {"role": "system", "content": FOLLOWUP_SYSTEM_PROMPT},
+                {"role": "user",   "content": user_message},
+            ],
+            timeout=30,
+        )
+
+        return format_verdict(response.choices[0].message.content)
+
+    except APITimeoutError as e:
+        print(f"[ai_service] Timeout in analyze_followup_query: {e}")
+        raise AIServiceError("ai_timeout") from e
+    except Exception as e:
+        print(f"[ai_service] Error in analyze_followup_query: {e}")
         raise AIServiceError("ai_unavailable") from e
 
 

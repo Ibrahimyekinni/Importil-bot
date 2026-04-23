@@ -109,7 +109,7 @@ async def handle_track(update, context):
 
     if conv_state == 'AWAITING_FOLLOWUP':
         from bot.services.ai_service import (
-            analyze_text_query, analyze_image_query, AIServiceError,
+            analyze_text_query, analyze_image_query, analyze_followup_query, AIServiceError,
         )
         from bot.handlers.check import keep_typing, extract_verdict
 
@@ -241,17 +241,16 @@ async def handle_track(update, context):
                 keep_typing(context.bot, update.effective_chat.id, stop_event)
             )
             try:
-                response = analyze_text_query(
+                response = analyze_followup_query(
                     text,
                     conversation_history=history,
                     lang_instruction=lang_instruction,
                 )
-                verdict = extract_verdict(response)
                 save_query(
                     telegram_id=telegram_id,
                     query_type='text',
                     query_content=text,
-                    verdict=verdict,
+                    verdict='followup',
                     full_response=response,
                 )
                 history.append({"role": "user",      "content": text})
