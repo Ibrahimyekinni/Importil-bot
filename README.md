@@ -82,12 +82,5 @@ https://importil-bot.vercel.app/webhook
 
 ---
 
-## 📋 Pending Features
-
-- [ ] Blacklist check — requires `rejected_items.csv` from client
-- [ ] Golden Path — affidavit auto-fill after ALLOWED/CONDITIONAL verdict
-- [ ] Gov.il form automation — conversational field collector
-
----
 
 *Private project — all rights reserved.*
