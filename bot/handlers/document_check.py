@@ -2,7 +2,9 @@ import asyncio
 import io
 import traceback
 
-from bot.services.db_service import is_approved, save_query, get_user_language
+import json
+
+from bot.services.db_service import is_approved, save_query, get_user_language, set_user_state
 from bot.services.ai_service import analyze_text_query, AIServiceError
 from bot.utils.messages import get_message, get_error_message
 from bot.handlers.check import keep_typing, extract_verdict
@@ -98,8 +100,16 @@ async def handle_document_check(update, context):
                 verdict=verdict,
                 full_response=response,
             )
-
             await update.message.reply_text(response, parse_mode="Markdown")
+            try:
+                set_user_state(telegram_id, 'AWAITING_FOLLOWUP', json.dumps({
+                    'history': [
+                        {"role": "user",      "content": product_description[:500]},
+                        {"role": "assistant",  "content": response},
+                    ]
+                }))
+            except Exception as e:
+                print(f"[document_check] failed to save AWAITING_FOLLOWUP: {e}")
 
         except AIServiceError as e:
             await update.message.reply_text(get_error_message(str(e), language))

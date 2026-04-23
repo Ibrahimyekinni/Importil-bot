@@ -20,7 +20,7 @@ MESSAGES = {
         'link_fetch_tip': "💡 Tip: Just type the product name or model number directly and I'll check it instantly!",
         'link_error': "⚠️ Sorry, something went wrong while processing that link. Please try again or type the product name directly.",
         'link_unclear': "⚠️ I couldn't extract enough product details from that link. Could you tell me the product name, model number, or frequency specs so I can give you an accurate verdict?",
-        'refresh_success': "🔄 Document cache refreshed successfully! AI brain updated.",
+        'refresh_success': "🔄 Document cache refreshed successfully! AI brain updated.\n💬 Conversation memory cleared.",
         'refresh_error': "❌ Failed to refresh the cache. Check logs for details.",
         'no_permission': "⛔ You don't have permission to do this.",
         'approved_notification': (
@@ -90,7 +90,7 @@ MESSAGES = {
         'link_fetch_tip': "💡 טיפ: פשוט הקלד את שם המוצר או מספר הדגם ישירות ואבדוק מיד!",
         'link_error': "⚠️ מצטער, משהו השתבש בעיבוד הקישור. אנא נסה שוב או הקלד את שם המוצר ישירות.",
         'link_unclear': "⚠️ לא הצלחתי לחלץ מספיק פרטי מוצר מהקישור. האם תוכל לספר לי את שם המוצר, מספר הדגם, או מפרטי התדר כדי שאוכל לתת לך פסיקה מדויקת?",
-        'refresh_success': "🔄 המטמון רוענן בהצלחה! המוח ה-AI עודכן.",
+        'refresh_success': "🔄 המטמון רוענן בהצלחה! המוח ה-AI עודכן.\n💬 זיכרון השיחה נוקה.",
         'refresh_error': "❌ רענון המטמון נכשל. בדוק את הלוגים לפרטים.",
         'no_permission': "⛔ אין לך הרשאה לבצע פעולה זו.",
         'approved_notification': (

@@ -1,7 +1,9 @@
 import asyncio
 import traceback
 
-from bot.services.db_service import is_approved, save_query, get_user_language
+import json
+
+from bot.services.db_service import is_approved, save_query, get_user_language, set_user_state
 from bot.services.ai_service import analyze_text_query, analyze_image_query, AIServiceError
 from bot.utils.messages import get_message, get_error_message
 from bot.handlers.url_check import extract_url, fetch_product_content, is_low_confidence
@@ -101,8 +103,16 @@ async def handle_check(update, context):
                 verdict=verdict,
                 full_response=response,
             )
-
             await update.message.reply_text(response, parse_mode="Markdown")
+            try:
+                set_user_state(telegram_id, 'AWAITING_FOLLOWUP', json.dumps({
+                    'history': [
+                        {"role": "user",      "content": f"[Image]{(' ' + additional_text) if additional_text else ''}"},
+                        {"role": "assistant",  "content": response},
+                    ]
+                }))
+            except Exception as e:
+                print(f"[check] failed to save AWAITING_FOLLOWUP after photo: {e}")
 
         except AIServiceError as e:
             await update.message.reply_text(get_error_message(str(e), language))
@@ -188,6 +198,15 @@ async def handle_check(update, context):
                         full_response=response,
                     )
                     await update.message.reply_text(response, parse_mode="Markdown")
+                    try:
+                        set_user_state(telegram_id, 'AWAITING_FOLLOWUP', json.dumps({
+                            'history': [
+                                {"role": "user",      "content": product_description[:500]},
+                                {"role": "assistant",  "content": response},
+                            ]
+                        }))
+                    except Exception as e:
+                        print(f"[check] failed to save AWAITING_FOLLOWUP after link: {e}")
 
             except AIServiceError:
                 await update.message.reply_text(get_error_message('ai_unavailable', language))
@@ -231,6 +250,14 @@ async def handle_check(update, context):
             )
 
             await update.message.reply_text(response, parse_mode="Markdown")
+            full_history = list(history or []) + [
+                {"role": "user",      "content": query_content},
+                {"role": "assistant",  "content": response},
+            ]
+            try:
+                set_user_state(telegram_id, 'AWAITING_FOLLOWUP', json.dumps({'history': full_history[-10:]}))
+            except Exception as e:
+                print(f"[check] failed to save AWAITING_FOLLOWUP after text: {e}")
 
             # ── Update conversation context ───────────────────────────────────
             if is_final_verdict(verdict):

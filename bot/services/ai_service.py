@@ -271,7 +271,7 @@ Please provide a full compliance verdict using the required format:
         raise AIServiceError("ai_unavailable") from e
 
 
-def analyze_image_query(image_bytes, additional_text="", lang_instruction=""):
+def analyze_image_query(image_bytes, additional_text="", lang_instruction="", conversation_history=None):
     """
     Analyses a product image against Israeli customs compliance rules using
     Groq's vision model (llama-4-scout).
@@ -295,11 +295,17 @@ def analyze_image_query(image_bytes, additional_text="", lang_instruction=""):
 
         caption_line = f'They also wrote: "{additional_text}"' if additional_text else ""
 
+        history_block = _build_history_block(conversation_history)
+        prior_context = (
+            f"PRIOR CONVERSATION CONTEXT:\n{history_block}\n--- END OF PRIOR CONTEXT ---\n\n"
+            if history_block else ""
+        )
+
         # Do NOT inject the Drive compliance context here — the SYSTEM_PROMPT already
         # contains every rule and the image itself already consumes significant tokens.
         # Adding thousands of Drive-doc tokens on top pushes the call over the model's
         # context limit, which is the root cause of silent vision failures.
-        text_prompt = f"""IMAGE ANALYSIS TASK:
+        text_prompt = f"""{prior_context}IMAGE ANALYSIS TASK:
 The user has uploaded a photo of a product they wish to import into Israel.
 {caption_line}
 
