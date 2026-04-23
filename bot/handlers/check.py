@@ -7,11 +7,7 @@ from bot.services.db_service import is_approved, save_query, get_user_language, 
 from bot.services.ai_service import analyze_text_query, analyze_image_query, AIServiceError
 from bot.utils.messages import get_message, get_error_message
 from bot.handlers.url_check import extract_url, fetch_product_content, is_low_confidence
-
-# Per-user conversation history for CONDITIONAL follow-ups.
-# Structure: { telegram_id: [{"role": "user"|"assistant", "content": str}, ...] }
-# Cleared automatically when a final ALLOWED or REJECTED verdict is reached.
-user_context = {}
+from bot.handlers.track import split_message
 
 
 def extract_verdict(response_text):
@@ -25,11 +21,6 @@ def extract_verdict(response_text):
     if "REJECTED" in upper:
         return "rejected"
     return "conditional"
-
-
-def is_final_verdict(verdict):
-    """Returns True for verdicts that close the conversation (not conditional)."""
-    return verdict in ("allowed", "rejected")
 
 
 async def keep_typing(bot, chat_id, stop_event):
@@ -52,11 +43,10 @@ async def handle_check(update, context):
     Only approved users can submit queries.
 
     Conversation flow:
-      - First text message → fresh analysis
-      - If verdict is CONDITIONAL, history is saved so the next message from
-        this user is treated as a follow-up and the full context is passed to AI
-      - When verdict reaches ALLOWED or REJECTED, context is cleared
-      - Photos always start a fresh analysis (no history threading for vision)
+      - Every text or photo message triggers a fresh compliance analysis.
+      - After each verdict the DB state is set to AWAITING_FOLLOWUP so the
+        next message from this user is handled as a follow-up by track.py.
+      - Photos always start a fresh analysis.
     """
     telegram_id = update.effective_user.id
     chat_id     = update.effective_chat.id
@@ -78,8 +68,8 @@ async def handle_check(update, context):
 
         await update.message.reply_text(get_message('analyzing_image', language))
 
-        photo          = update.message.photo[-1]
-        query_content  = f"photo:{photo.file_id}"
+        photo           = update.message.photo[-1]
+        query_content   = f"photo:{photo.file_id}"
         additional_text = update.message.caption or ""
 
         stop_event  = asyncio.Event()
@@ -103,7 +93,8 @@ async def handle_check(update, context):
                 verdict=verdict,
                 full_response=response,
             )
-            await update.message.reply_text(response, parse_mode="Markdown")
+            for chunk in split_message(response):
+                await update.message.reply_text(chunk, parse_mode="Markdown")
             try:
                 set_user_state(telegram_id, 'AWAITING_FOLLOWUP', json.dumps({
                     'history': [
@@ -197,7 +188,8 @@ async def handle_check(update, context):
                         verdict=verdict,
                         full_response=response,
                     )
-                    await update.message.reply_text(response, parse_mode="Markdown")
+                    for chunk in split_message(response):
+                        await update.message.reply_text(chunk, parse_mode="Markdown")
                     try:
                         set_user_state(telegram_id, 'AWAITING_FOLLOWUP', json.dumps({
                             'history': [
@@ -220,15 +212,9 @@ async def handle_check(update, context):
 
             return  # URL handling is always a fresh check — no conversation context
 
-        # ── Plain-text query (with optional follow-up context) ────────────────
+        # ── Plain-text query ──────────────────────────────────────────────────
 
-        # Check if we have a pending CONDITIONAL conversation for this user
-        history = user_context.get(telegram_id)
-
-        if history:
-            await update.message.reply_text(get_message('analyzing_followup', language))
-        else:
-            await update.message.reply_text(get_message('analyzing_text', language))
+        await update.message.reply_text(get_message('analyzing_text', language))
 
         stop_event  = asyncio.Event()
         typing_task = asyncio.create_task(keep_typing(context.bot, chat_id, stop_event))
@@ -236,7 +222,6 @@ async def handle_check(update, context):
         try:
             response = analyze_text_query(
                 query_content,
-                conversation_history=history,
                 lang_instruction=lang_instruction,
             )
             verdict = extract_verdict(response)
@@ -249,8 +234,9 @@ async def handle_check(update, context):
                 full_response=response,
             )
 
-            await update.message.reply_text(response, parse_mode="Markdown")
-            full_history = list(history or []) + [
+            for chunk in split_message(response):
+                await update.message.reply_text(chunk, parse_mode="Markdown")
+            full_history = [
                 {"role": "user",      "content": query_content},
                 {"role": "assistant",  "content": response},
             ]
@@ -258,24 +244,6 @@ async def handle_check(update, context):
                 set_user_state(telegram_id, 'AWAITING_FOLLOWUP', json.dumps({'history': full_history[-10:]}))
             except Exception as e:
                 print(f"[check] failed to save AWAITING_FOLLOWUP after text: {e}")
-
-            # ── Update conversation context ───────────────────────────────────
-            if is_final_verdict(verdict):
-                # Final verdict reached — clear context so the next message
-                # starts a completely fresh analysis
-                user_context.pop(telegram_id, None)
-            else:
-                # Verdict is CONDITIONAL — append this exchange to history so
-                # the next message is treated as a follow-up
-                if telegram_id not in user_context:
-                    user_context[telegram_id] = []
-
-                user_context[telegram_id].append(
-                    {"role": "user",      "content": query_content}
-                )
-                user_context[telegram_id].append(
-                    {"role": "assistant", "content": response}
-                )
 
         except AIServiceError as e:
             await update.message.reply_text(get_error_message(str(e), language))
