@@ -1,9 +1,10 @@
 import json
+import traceback
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 
 from bot.services.db_service import (
-    is_approved, get_user_language, get_user_state, set_user_state, save_query,
+    get_user, set_user_state, save_query,
 )
 from bot.utils.messages import get_message
 
@@ -89,38 +90,20 @@ async def handle_track(update, context):
       ASK_QUANTITY→ validate quantity, classify track, exemption check, compliance check
     """
     telegram_id = update.effective_user.id
-    language = get_user_language(telegram_id)
 
-    if not is_approved(telegram_id):
-        await update.message.reply_text(get_message('no_access', language))
+    # Single DB round-trip for all user fields (approved, language, conv_state, conv_data).
+    # Three separate calls (get_user_language + is_approved + get_user_state) meant three
+    # independent Neon connections; if the third failed it returned (None, None) and the
+    # handler silently restarted the flow, causing the repeated-keyboard and short-text bugs.
+    user = get_user(telegram_id)
+    if not (user and user.get('approved')):
+        lang = (user.get('language') if user else None) or 'en'
+        await update.message.reply_text(get_message('no_access', lang))
         return
 
-    conv_state, conv_data = get_user_state(telegram_id)
-
-    if conv_state is None:
-        data = {"update": update.to_dict()}
-        set_user_state(telegram_id, 'ASK_TYPE', json.dumps(data))
-
-        keyboard = [[
-            InlineKeyboardButton("🧍 Private Person", callback_data="track_private"),
-            InlineKeyboardButton("🏢 Company", callback_data="track_company"),
-        ]]
-        await update.message.reply_text(
-            get_message('ask_importer_type', language),
-            reply_markup=InlineKeyboardMarkup(keyboard),
-        )
-        return
-
-    if conv_state == 'ASK_TYPE':
-        keyboard = [[
-            InlineKeyboardButton("🧍 Private Person", callback_data="track_private"),
-            InlineKeyboardButton("🏢 Company", callback_data="track_company"),
-        ]]
-        await update.message.reply_text(
-            get_message('ask_importer_type', language),
-            reply_markup=InlineKeyboardMarkup(keyboard),
-        )
-        return
+    language   = user.get('language') or 'en'
+    conv_state = user.get('conv_state')
+    conv_data  = user.get('conv_data')
 
     if conv_state == 'ASK_QUANTITY':
         text = update.message.text.strip() if update.message.text else ""
@@ -150,7 +133,11 @@ async def handle_track(update, context):
             else:
                 await update.message.reply_text(get_message('commercial_license_required', language))
 
-        set_user_state(telegram_id, None)
+        try:
+            set_user_state(telegram_id, None)
+        except Exception as e:
+            print(f"[track] failed to clear conv_state: {type(e).__name__}: {e}")
+            traceback.print_exc()
 
         if allowed and original_update_data:
             description = _extract_description(original_update_data)
@@ -178,6 +165,34 @@ async def handle_track(update, context):
             else:
                 await handle_check(original_update, context)
 
+    elif conv_state == 'ASK_TYPE':
+        keyboard = [[
+            InlineKeyboardButton("🧍 Private Person", callback_data="track_private"),
+            InlineKeyboardButton("🏢 Company", callback_data="track_company"),
+        ]]
+        await update.message.reply_text(
+            get_message('ask_importer_type', language),
+            reply_markup=InlineKeyboardMarkup(keyboard),
+        )
+
+    else:
+        # conv_state is None (or unexpected) → start a fresh classification flow
+        data = {"update": update.to_dict()}
+        try:
+            set_user_state(telegram_id, 'ASK_TYPE', json.dumps(data))
+        except Exception as e:
+            print(f"[track] failed to save ASK_TYPE state: {type(e).__name__}: {e}")
+            traceback.print_exc()
+
+        keyboard = [[
+            InlineKeyboardButton("🧍 Private Person", callback_data="track_private"),
+            InlineKeyboardButton("🏢 Company", callback_data="track_company"),
+        ]]
+        await update.message.reply_text(
+            get_message('ask_importer_type', language),
+            reply_markup=InlineKeyboardMarkup(keyboard),
+        )
+
 
 async def handle_track_callback(update, context):
     """
@@ -188,9 +203,15 @@ async def handle_track_callback(update, context):
     await query.answer()
 
     telegram_id = update.effective_user.id
-    language = get_user_language(telegram_id)
 
-    conv_state, conv_data = get_user_state(telegram_id)
+    # Single DB round-trip (same reason as handle_track above).
+    user = get_user(telegram_id)
+    if not (user and user.get('approved')):
+        return
+
+    language   = user.get('language') or 'en'
+    conv_state = user.get('conv_state')
+    conv_data  = user.get('conv_data')
 
     if conv_state != 'ASK_TYPE':
         return
@@ -200,7 +221,13 @@ async def handle_track_callback(update, context):
     data = json.loads(conv_data) if conv_data else {}
     data['importer_type'] = importer_type
 
-    set_user_state(telegram_id, 'ASK_QUANTITY', json.dumps(data))
+    try:
+        set_user_state(telegram_id, 'ASK_QUANTITY', json.dumps(data))
+    except Exception as e:
+        print(f"[track_callback] failed to save ASK_QUANTITY state: {type(e).__name__}: {e}")
+        traceback.print_exc()
+        await query.message.reply_text(get_message('error', language))
+        return
 
     await query.edit_message_reply_markup(reply_markup=None)
     await query.message.reply_text(get_message('ask_quantity', language))
