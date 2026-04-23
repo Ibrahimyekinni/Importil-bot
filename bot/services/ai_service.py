@@ -1,5 +1,6 @@
 import base64
 import io
+import re
 import traceback
 
 from groq import Groq, APITimeoutError
@@ -113,6 +114,12 @@ YOUR BEHAVIOR RULES:
 - Be conversational and direct like a knowledgeable colleague
 - Format verdicts clearly with the exact template provided below — always include every field
 - Confidence should be HIGH when you know the frequency, MEDIUM when inferring from product category
+
+FORMATTING RULES (Telegram bot — strictly enforced):
+- NEVER use markdown headers: no #, ##, ### — Telegram renders them as raw text
+- NEVER use **double asterisk bold** — use *single asterisk* for bold instead
+- NEVER use --- or === dividers
+- Only Telegram-compatible formatting is allowed: *bold*, _italic_, `code`
 
 RESPONSE FORMAT - ALWAYS USE THIS EXACTLY (all 7 fields required):
 *🛃 Importil Compliance Check*
@@ -345,7 +352,20 @@ Please do the following in order:
 
 def format_verdict(raw_response):
     """
-    Returns the Groq response trimmed of surrounding whitespace.
-    The model formats the full response itself including the header.
+    Cleans the Groq response for Telegram: strips unsupported markdown
+    (# headers, **double-star bold**, --- dividers) and normalises whitespace.
     """
-    return raw_response.strip()
+    text = raw_response.strip()
+    print(f"[format_verdict] RAW: {repr(text[:300])}")
+    # Strip #{1,6} followed by a space wherever they appear (inline or line-start).
+    # The previous ^-anchored pattern missed headers Groq emits mid-string.
+    text = re.sub(r'#{1,6}\s+', '', text)
+    # **bold** → *bold* (Telegram uses single asterisks)
+    text = re.sub(r'\*\*(.+?)\*\*', r'*\1*', text, flags=re.DOTALL)
+    # Standalone --- or === divider lines → removed
+    text = re.sub(r'^[-=]{3,}\s*$', '', text, flags=re.MULTILINE)
+    # Collapse runs of 3+ blank lines left by removals
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = text.strip()
+    print(f"[format_verdict] CLEANED: {repr(text[:300])}")
+    return text
