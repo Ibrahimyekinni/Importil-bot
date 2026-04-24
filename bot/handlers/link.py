@@ -1,4 +1,4 @@
-from bot.services.db_service import save_user, get_user_language
+from bot.services.db_service import get_user, save_user
 from bot.utils.messages import get_message
 
 
@@ -10,7 +10,8 @@ async def handle_link(update, context):
     """
     telegram_id = update.effective_user.id
     username    = update.effective_user.username or update.effective_user.first_name
-    language    = get_user_language(telegram_id)
+    user     = get_user(telegram_id)
+    language = user.get('language', 'en') if user else 'en'
 
     if not context.args:
         await update.message.reply_text(get_message('link_usage', language))

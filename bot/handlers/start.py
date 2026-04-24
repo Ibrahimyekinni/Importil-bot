@@ -1,6 +1,6 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-from bot.services.db_service import get_user, save_user, get_user_language
+from bot.services.db_service import get_user, save_user
 from bot.utils.messages import get_message
 from config.settings import ADMIN_TELEGRAM_ID
 
@@ -26,7 +26,7 @@ async def handle_start(update, context):
     username    = update.effective_user.username or update.effective_user.first_name
 
     user     = get_user(telegram_id)
-    language = get_user_language(telegram_id)
+    language = user.get('language', 'en') if user else 'en'
 
     if user and user["approved"]:
         # Returning approved user — greet them in their chosen language

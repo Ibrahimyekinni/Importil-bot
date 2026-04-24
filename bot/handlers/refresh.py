@@ -1,5 +1,5 @@
 from bot.services.drive_service import refresh_cache
-from bot.services.db_service import get_user_language, set_user_state
+from bot.services.db_service import get_user, set_user_state
 from bot.utils.messages import get_message
 from config.settings import ADMIN_TELEGRAM_ID
 
@@ -11,7 +11,8 @@ async def handle_refresh(update, context):
     conversation memory. Only the admin (ADMIN_TELEGRAM_ID) is allowed to run this.
     """
     telegram_id = update.effective_user.id
-    language    = get_user_language(telegram_id)
+    user     = get_user(telegram_id)
+    language = user.get('language', 'en') if user else 'en'
 
     if telegram_id != ADMIN_TELEGRAM_ID:
         await update.message.reply_text(get_message('no_permission', language))

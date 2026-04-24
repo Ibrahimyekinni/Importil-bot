@@ -1,11 +1,11 @@
-from bot.services.db_service import get_user, get_user_language, get_query_count
+from bot.services.db_service import get_user, get_query_count
 from bot.utils.messages import get_message
 
 
 async def handle_status(update, context):
     telegram_id = update.effective_user.id
-    language    = get_user_language(telegram_id)
     user        = get_user(telegram_id)
+    language    = user.get('language', 'en') if user else 'en'
 
     if language == 'he':
         access_status  = "✅ מאושר" if (user and user['approved']) else "⏳ ממתין לאישור"

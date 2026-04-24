@@ -3,7 +3,7 @@ import traceback
 
 import json
 
-from bot.services.db_service import is_approved, save_query, get_user_language, set_user_state
+from bot.services.db_service import get_user, save_query, set_user_state
 from bot.services.ai_service import analyze_text_query, analyze_image_query, AIServiceError
 from bot.utils.messages import get_message, get_error_message
 from bot.handlers.url_check import extract_url, fetch_product_content, is_low_confidence
@@ -50,10 +50,12 @@ async def handle_check(update, context):
     """
     telegram_id = update.effective_user.id
     chat_id     = update.effective_chat.id
-    language    = get_user_language(telegram_id)
+    user     = get_user(telegram_id)
+    language = user.get('language', 'en') if user else 'en'
+    approved = user.get('approved', False) if user else False
 
     # Block unapproved users before doing anything else
-    if not is_approved(telegram_id):
+    if not approved:
         await update.message.reply_text(get_message('no_access', language))
         return
 

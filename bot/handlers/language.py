@@ -1,6 +1,6 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-from bot.services.db_service import get_user_language, update_user_language
+from bot.services.db_service import get_user, update_user_language
 from bot.utils.messages import get_message
 
 
@@ -10,7 +10,8 @@ async def handle_language_command(update, context):
     Sends an inline keyboard so the user can pick English or Hebrew.
     """
     telegram_id = update.effective_user.id
-    language = get_user_language(telegram_id)
+    user     = get_user(telegram_id)
+    language = user.get('language', 'en') if user else 'en'
 
     keyboard = InlineKeyboardMarkup([
         [

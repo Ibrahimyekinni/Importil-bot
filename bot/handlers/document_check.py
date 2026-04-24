@@ -4,7 +4,7 @@ import traceback
 
 import json
 
-from bot.services.db_service import is_approved, save_query, get_user_language, set_user_state
+from bot.services.db_service import get_user, save_query, set_user_state
 from bot.services.ai_service import analyze_text_query, AIServiceError
 from bot.utils.messages import get_message, get_error_message
 from bot.handlers.check import keep_typing, extract_verdict
@@ -37,10 +37,11 @@ async def handle_document_check(update, context):
     """
     telegram_id = update.effective_user.id
     chat_id     = update.effective_chat.id
-    language    = get_user_language(telegram_id)
+    user     = get_user(telegram_id)
+    language = user.get('language', 'en') if user else 'en'
 
     try:
-        if not is_approved(telegram_id):
+        if not (user and user.get('approved', False)):
             await update.message.reply_text(get_message('no_access', language))
             return
 
