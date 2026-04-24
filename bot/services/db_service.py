@@ -65,8 +65,6 @@ def create_tables():
             cur.execute("""
                 ALTER TABLE users ADD COLUMN IF NOT EXISTS notes TEXT;
             """)
-        conn.commit()
-
 
 def save_user(telegram_id, telegram_username, email):
     """
@@ -88,8 +86,6 @@ def save_user(telegram_id, telegram_username, email):
                     SET telegram_username = EXCLUDED.telegram_username,
                         email             = EXCLUDED.email;
             """, (telegram_id, telegram_username, email))
-        conn.commit()
-
 
 def get_user(telegram_id):
     """
@@ -142,8 +138,6 @@ def save_query(telegram_id, query_type, query_content, verdict, full_response):
                     (telegram_id, query_type, query_content, verdict, full_response)
                 VALUES (%s, %s, %s, %s, %s);
             """, (telegram_id, query_type, query_content, verdict, full_response))
-        conn.commit()
-
 
 def get_all_users():
     """
@@ -195,8 +189,6 @@ def approve_user(telegram_id):
                     approved_at = NOW()
                 WHERE telegram_id = %s;
             """, (telegram_id,))
-        conn.commit()
-
 
 def revoke_user(telegram_id):
     """
@@ -215,8 +207,6 @@ def revoke_user(telegram_id):
                 SET approved = FALSE
                 WHERE telegram_id = %s;
             """, (telegram_id,))
-        conn.commit()
-
 
 def update_user_language(telegram_id, language):
     """
@@ -234,8 +224,6 @@ def update_user_language(telegram_id, language):
                 SET language = %s
                 WHERE telegram_id = %s;
             """, (language, telegram_id))
-        conn.commit()
-
 
 def get_query_count(telegram_id):
     """
@@ -285,8 +273,6 @@ def set_user_state(telegram_id, state, data=None):
                     SET conv_state = EXCLUDED.conv_state,
                         conv_data  = EXCLUDED.conv_data;
             """, (telegram_id, state, data))
-        conn.commit()
-
 
 def save_user_note(telegram_id, note):
     """
@@ -303,5 +289,3 @@ def save_user_note(telegram_id, note):
             cur.execute("""
                 UPDATE users SET notes = %s WHERE telegram_id = %s;
             """, (note or None, telegram_id))
-        conn.commit()
-

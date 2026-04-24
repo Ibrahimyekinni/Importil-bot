@@ -1,3 +1,4 @@
+import hmac
 import logging
 import os
 import sys
@@ -78,7 +79,7 @@ def login():
     """Show login page (GET) or validate the admin password (POST)."""
     if request.method == "POST":
         password = request.form.get("password", "")
-        if password == ADMIN_PASSWORD:
+        if hmac.compare_digest(password, ADMIN_PASSWORD):
             session["authenticated"] = True
             return redirect(url_for("dashboard"))
         flash("Incorrect password. Please try again.")

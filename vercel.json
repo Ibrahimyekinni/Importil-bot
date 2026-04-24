@@ -7,5 +7,10 @@
   "routes": [
     { "src": "/webhook", "dest": "api/webhook.py" },
     { "src": "/(.*)", "dest": "api/index.py" }
-  ]
+  ],
+  "functions": {
+    "api/*.py": {
+      "maxDuration": 60
+    }
+  }
 }

@@ -1,3 +1,5 @@
+import re
+
 from bot.services.db_service import get_user, save_user
 from bot.utils.messages import get_message
 
@@ -18,6 +20,11 @@ async def handle_link(update, context):
         return
 
     email = context.args[0]
+    if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+        await update.message.reply_text(
+            "Invalid email address. Please provide a valid email."
+        )
+        return
     save_user(telegram_id, username, email)
 
     await update.message.reply_text(get_message('link_success', language))
