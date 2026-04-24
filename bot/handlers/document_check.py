@@ -8,6 +8,7 @@ from bot.services.db_service import get_user, save_query, set_user_state
 from bot.services.ai_service import analyze_text_query, AIServiceError
 from bot.utils.messages import get_message, get_error_message
 from bot.handlers.check import keep_typing, extract_verdict
+from bot.utils.helpers import split_message
 
 SUPPORTED_MIME_TYPES = {
     "application/pdf",
@@ -101,7 +102,8 @@ async def handle_document_check(update, context):
                 verdict=verdict,
                 full_response=response,
             )
-            await update.message.reply_text(response, parse_mode="Markdown")
+            for chunk in split_message(response):
+                await update.message.reply_text(chunk, parse_mode="Markdown")
             try:
                 set_user_state(telegram_id, 'AWAITING_FOLLOWUP', json.dumps({
                     'history': [

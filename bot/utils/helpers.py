@@ -1,15 +1,28 @@
-from bot.services.db_service import get_user_language
-from bot.utils.messages import get_message
-
-
-async def notify_user_approved(bot, telegram_id: int):
-    """
-    Sends an approval notification to a user after Dekel approves them
-    from the dashboard. Called directly from the Flask dashboard route.
-    Uses the user's preferred language if set.
-    """
-    language = get_user_language(telegram_id)
-    await bot.send_message(
-        chat_id=telegram_id,
-        text=get_message('approved_notification', language),
-    )
+def split_message(text, max_length=600):
+    """Split text at natural boundaries (paragraph → newline → sentence end). Never mid-word."""
+    if len(text) <= max_length:
+        return [text]
+    chunks = []
+    remaining = text
+    while len(remaining) > max_length:
+        chunk = remaining[:max_length]
+        pos = chunk.rfind('\n\n')
+        if pos > 0:
+            chunks.append(remaining[:pos])
+            remaining = remaining[pos + 2:].lstrip()
+            continue
+        pos = chunk.rfind('\n')
+        if pos > 0:
+            chunks.append(remaining[:pos])
+            remaining = remaining[pos + 1:].lstrip()
+            continue
+        best = max(chunk.rfind('.'), chunk.rfind('!'), chunk.rfind('?'))
+        if best > 0:
+            chunks.append(remaining[:best + 1])
+            remaining = remaining[best + 1:].lstrip()
+            continue
+        chunks.append(chunk)
+        remaining = remaining[max_length:].lstrip()
+    if remaining:
+        chunks.append(remaining)
+    return chunks

@@ -7,7 +7,7 @@ from bot.services.db_service import get_user, save_query, set_user_state
 from bot.services.ai_service import analyze_text_query, analyze_image_query, AIServiceError
 from bot.utils.messages import get_message, get_error_message
 from bot.handlers.url_check import extract_url, fetch_product_content, is_low_confidence
-from bot.handlers.track import split_message
+from bot.utils.helpers import split_message
 
 
 def extract_verdict(response_text):
