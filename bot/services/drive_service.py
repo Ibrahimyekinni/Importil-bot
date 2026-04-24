@@ -1,7 +1,7 @@
 # Google Drive service — reads compliance documents from a shared Drive folder
 #
 # Additional dependencies required:
-#   pip install PyPDF2 openpyxl python-docx
+#   pip install pypdf openpyxl python-docx
 #
 # These are also listed in requirements.txt
 
@@ -66,7 +66,7 @@ def read_file(file_id, mime_type):
     based on the mime_type.
 
     Supported formats:
-        - PDF  (application/pdf)                                          → PyPDF2
+        - PDF  (application/pdf)                                          → pypdf
         - Excel (.xlsx)                                                   → openpyxl
         - Word  (.docx)                                                   → python-docx
         - Plain text (text/plain)                                         → raw decode

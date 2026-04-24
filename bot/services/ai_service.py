@@ -1,5 +1,4 @@
 import base64
-import io
 import re
 import traceback
 
@@ -231,7 +230,6 @@ def analyze_text_query(product_description, conversation_history=None, lang_inst
         )
 
         history_block = _build_history_block(conversation_history)
-        print(f"[ai_service] analyze_text_query: history_entries={len(conversation_history or [])}, history_block_empty={not history_block}")
 
         user_message = f"""--- CONTEXT ---
 {context_block}
@@ -288,10 +286,6 @@ def analyze_followup_query(user_question, conversation_history, lang_instruction
         client = get_client()
 
         history_block = _build_history_block(conversation_history)
-        print(
-            f"[ai_service] analyze_followup_query: history_entries={len(conversation_history or [])}, "
-            f"history_block_empty={not history_block}, question={repr(user_question[:100])}"
-        )
 
         prior_context = (
             f"--- PRIOR CONVERSATION CONTEXT ---\n{history_block}\n--- END OF PRIOR CONTEXT ---\n\n"

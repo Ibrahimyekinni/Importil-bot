@@ -305,23 +305,3 @@ def save_user_note(telegram_id, note):
             """, (note or None, telegram_id))
         conn.commit()
 
-
-def get_user_state(telegram_id):
-    """
-    Returns (conv_state, conv_data) for the given user.
-    Returns (None, None) if the user is not found or the DB is unreachable.
-    """
-    conn = get_connection()
-    if conn is None:
-        return (None, None)
-
-    with conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT conv_state, conv_data FROM users WHERE telegram_id = %s;",
-                (telegram_id,)
-            )
-            row = cur.fetchone()
-            if row is None:
-                return (None, None)
-            return (row[0], row[1])
