@@ -110,187 +110,198 @@ async def handle_track(update, context):
     conv_data  = user.get('conv_data')
 
     if conv_state == 'AWAITING_FOLLOWUP':
+        print(f"[track] AWAITING_FOLLOWUP: conv_data raw = {user.get('conv_data')}")
         from bot.services.ai_service import (
             analyze_text_query, analyze_image_query, analyze_followup_query, AIServiceError,
         )
         from bot.handlers.check import keep_typing, extract_verdict
 
-        data    = json.loads(conv_data) if conv_data else {}
-        history = data.get('history', [])
-        lang_instruction = (
-            "Respond in Hebrew (עברית)." if language == "he" else "Respond in English."
-        )
-
-        if update.message and update.message.photo:
+        try:
             try:
-                photo     = update.message.photo[-1]
-                tg_file   = await context.bot.get_file(photo.file_id)
-                img_bytes = bytes(await tg_file.download_as_bytearray())
-            except Exception as e:
-                print(f"[track] AWAITING_FOLLOWUP photo download failed: {e}")
-                await update.message.reply_text(get_message('image_error', language))
-                return
-
-            caption = update.message.caption or ""
-            proc_msg = await update.message.reply_text(get_message('analyzing_image', language))
-
-            stop_event  = asyncio.Event()
-            typing_task = asyncio.create_task(
-                keep_typing(context.bot, update.effective_chat.id, stop_event)
+                data = json.loads(conv_data) if conv_data else {}
+            except (json.JSONDecodeError, TypeError):
+                print("[track] AWAITING_FOLLOWUP: conv_data parse error, using empty dict")
+                data = {}
+            history = data.get('history', [])
+            lang_instruction = (
+                "Respond in Hebrew (עברית)." if language == "he" else "Respond in English."
             )
-            try:
-                await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
-                response = analyze_image_query(
-                    img_bytes,
-                    additional_text=caption,
-                    lang_instruction=lang_instruction,
-                    conversation_history=history,
-                )
-                verdict = extract_verdict(response)
-                save_query(
-                    telegram_id=telegram_id,
-                    query_type='photo',
-                    query_content=f"photo:{photo.file_id}",
-                    verdict=verdict,
-                    full_response=response,
-                )
-                history.append({"role": "user",      "content": f"[Image]{(' ' + caption) if caption else ''}"})
-                history.append({"role": "assistant",  "content": response})
-                data['history'] = history[-10:]
-                set_user_state(telegram_id, 'AWAITING_FOLLOWUP', json.dumps(data))
-                chunks = split_message(response)
-                for i, chunk in enumerate(chunks):
-                    await context.bot.send_message(chat_id=update.effective_chat.id, text=chunk, parse_mode="Markdown")
-                    if i < len(chunks) - 1:
-                        await asyncio.sleep(0.3)
+
+            if update.message and update.message.photo:
                 try:
-                    await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=proc_msg.message_id)
-                except Exception:
-                    pass
-            except AIServiceError as e:
-                await update.message.reply_text(get_error_message(str(e), language))
-            except Exception:
-                traceback.print_exc()
-                await update.message.reply_text(get_message('image_error', language))
-            finally:
-                stop_event.set()
-                typing_task.cancel()
-
-        elif update.message and update.message.document:
-            from bot.handlers.document_check import (
-                _extract_text_from_pdf, _extract_text_from_docx, SUPPORTED_MIME_TYPES,
-            )
-            document  = update.message.document
-            mime_type = document.mime_type or ""
-
-            if mime_type not in SUPPORTED_MIME_TYPES:
-                await update.message.reply_text(get_error_message('unsupported_file', language))
-                return
-
-            await update.message.reply_text(get_message('analyzing_document', language))
-
-            stop_event  = asyncio.Event()
-            typing_task = asyncio.create_task(
-                keep_typing(context.bot, update.effective_chat.id, stop_event)
-            )
-            try:
-                file       = await context.bot.get_file(document.file_id)
-                file_bytes = bytes(await file.download_as_bytearray())
-
-                if mime_type == "application/pdf":
-                    text = _extract_text_from_pdf(file_bytes)
-                else:
-                    text = _extract_text_from_docx(file_bytes)
-
-                text = text.strip()
-                if not text or len(text) < 20:
-                    await update.message.reply_text(get_message('document_error', language))
+                    photo     = update.message.photo[-1]
+                    tg_file   = await context.bot.get_file(photo.file_id)
+                    img_bytes = bytes(await tg_file.download_as_bytearray())
+                except Exception as e:
+                    print(f"[track] AWAITING_FOLLOWUP photo download failed: {e}")
+                    await update.message.reply_text(get_message('image_error', language))
                     return
 
-                filename = document.file_name or "document"
-                product_description = (
-                    f"The following product information was extracted from a document ({filename}):\n\n"
-                    f"{text[:8000]}"
-                )
-                await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
-                response = analyze_text_query(
-                    product_description,
-                    conversation_history=history,
-                    lang_instruction=lang_instruction,
-                )
-                verdict = extract_verdict(response)
-                save_query(
-                    telegram_id=telegram_id,
-                    query_type='document',
-                    query_content=f"document:{filename}",
-                    verdict=verdict,
-                    full_response=response,
-                )
-                history.append({"role": "user",      "content": product_description[:500]})
-                history.append({"role": "assistant",  "content": response})
-                data['history'] = history[-10:]
-                set_user_state(telegram_id, 'AWAITING_FOLLOWUP', json.dumps(data))
-                chunks = split_message(response)
-                for i, chunk in enumerate(chunks):
-                    await context.bot.send_message(chat_id=update.effective_chat.id, text=chunk, parse_mode="Markdown")
-                    if i < len(chunks) - 1:
-                        await asyncio.sleep(0.3)
-            except AIServiceError as e:
-                await update.message.reply_text(get_error_message(str(e), language))
-            except Exception:
-                traceback.print_exc()
-                await update.message.reply_text(get_message('document_error', language))
-            finally:
-                stop_event.set()
-                typing_task.cancel()
+                caption = update.message.caption or ""
+                proc_msg = await update.message.reply_text(get_message('analyzing_image', language))
 
-        else:
-            text = (update.message.text or "").strip() if update.message else ""
-            if len(text) < 3:
-                await update.message.reply_text(get_error_message('invalid_input', language))
-                return
-
-            proc_msg = await update.message.reply_text(get_message('analyzing_followup', language))
-
-            stop_event  = asyncio.Event()
-            typing_task = asyncio.create_task(
-                keep_typing(context.bot, update.effective_chat.id, stop_event)
-            )
-            try:
-                await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
-                response = analyze_followup_query(
-                    text,
-                    conversation_history=history,
-                    lang_instruction=lang_instruction,
+                stop_event  = asyncio.Event()
+                typing_task = asyncio.create_task(
+                    keep_typing(context.bot, update.effective_chat.id, stop_event)
                 )
-                save_query(
-                    telegram_id=telegram_id,
-                    query_type='text',
-                    query_content=text,
-                    verdict='followup',
-                    full_response=response,
-                )
-                history.append({"role": "user",      "content": text})
-                history.append({"role": "assistant",  "content": response})
-                data['history'] = history[-10:]
-                set_user_state(telegram_id, 'AWAITING_FOLLOWUP', json.dumps(data))
-                chunks = split_message(response)
-                for i, chunk in enumerate(chunks):
-                    await context.bot.send_message(chat_id=update.effective_chat.id, text=chunk, parse_mode="Markdown")
-                    if i < len(chunks) - 1:
-                        await asyncio.sleep(0.3)
                 try:
-                    await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=proc_msg.message_id)
+                    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+                    response = analyze_image_query(
+                        img_bytes,
+                        additional_text=caption,
+                        lang_instruction=lang_instruction,
+                        conversation_history=history,
+                    )
+                    verdict = extract_verdict(response)
+                    save_query(
+                        telegram_id=telegram_id,
+                        query_type='photo',
+                        query_content=f"photo:{photo.file_id}",
+                        verdict=verdict,
+                        full_response=response,
+                    )
+                    history.append({"role": "user",      "content": f"[Image]{(' ' + caption) if caption else ''}"})
+                    history.append({"role": "assistant",  "content": response})
+                    data['history'] = history[-10:]
+                    set_user_state(telegram_id, 'AWAITING_FOLLOWUP', json.dumps(data))
+                    chunks = split_message(response)
+                    for i, chunk in enumerate(chunks):
+                        await context.bot.send_message(chat_id=update.effective_chat.id, text=chunk, parse_mode="Markdown")
+                        if i < len(chunks) - 1:
+                            await asyncio.sleep(0.3)
+                    try:
+                        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=proc_msg.message_id)
+                    except Exception:
+                        pass
+                except AIServiceError as e:
+                    await update.message.reply_text(get_error_message(str(e), language))
                 except Exception:
-                    pass
-            except AIServiceError as e:
-                await update.message.reply_text(get_error_message(str(e), language))
-            except Exception:
-                traceback.print_exc()
-                await update.message.reply_text(get_message('error', language))
-            finally:
-                stop_event.set()
-                typing_task.cancel()
+                    traceback.print_exc()
+                    await update.message.reply_text(get_message('image_error', language))
+                finally:
+                    stop_event.set()
+                    typing_task.cancel()
+
+            elif update.message and update.message.document:
+                from bot.handlers.document_check import (
+                    _extract_text_from_pdf, _extract_text_from_docx, SUPPORTED_MIME_TYPES,
+                )
+                document  = update.message.document
+                mime_type = document.mime_type or ""
+
+                if mime_type not in SUPPORTED_MIME_TYPES:
+                    await update.message.reply_text(get_error_message('unsupported_file', language))
+                    return
+
+                await update.message.reply_text(get_message('analyzing_document', language))
+
+                stop_event  = asyncio.Event()
+                typing_task = asyncio.create_task(
+                    keep_typing(context.bot, update.effective_chat.id, stop_event)
+                )
+                try:
+                    file       = await context.bot.get_file(document.file_id)
+                    file_bytes = bytes(await file.download_as_bytearray())
+
+                    if mime_type == "application/pdf":
+                        text = _extract_text_from_pdf(file_bytes)
+                    else:
+                        text = _extract_text_from_docx(file_bytes)
+
+                    text = text.strip()
+                    if not text or len(text) < 20:
+                        await update.message.reply_text(get_message('document_error', language))
+                        return
+
+                    filename = document.file_name or "document"
+                    product_description = (
+                        f"The following product information was extracted from a document ({filename}):\n\n"
+                        f"{text[:8000]}"
+                    )
+                    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+                    response = analyze_text_query(
+                        product_description,
+                        conversation_history=history,
+                        lang_instruction=lang_instruction,
+                    )
+                    verdict = extract_verdict(response)
+                    save_query(
+                        telegram_id=telegram_id,
+                        query_type='document',
+                        query_content=f"document:{filename}",
+                        verdict=verdict,
+                        full_response=response,
+                    )
+                    history.append({"role": "user",      "content": product_description[:500]})
+                    history.append({"role": "assistant",  "content": response})
+                    data['history'] = history[-10:]
+                    set_user_state(telegram_id, 'AWAITING_FOLLOWUP', json.dumps(data))
+                    chunks = split_message(response)
+                    for i, chunk in enumerate(chunks):
+                        await context.bot.send_message(chat_id=update.effective_chat.id, text=chunk, parse_mode="Markdown")
+                        if i < len(chunks) - 1:
+                            await asyncio.sleep(0.3)
+                except AIServiceError as e:
+                    await update.message.reply_text(get_error_message(str(e), language))
+                except Exception:
+                    traceback.print_exc()
+                    await update.message.reply_text(get_message('document_error', language))
+                finally:
+                    stop_event.set()
+                    typing_task.cancel()
+
+            else:
+                text = (update.message.text or "").strip() if update.message else ""
+                if len(text) < 3:
+                    await update.message.reply_text(get_error_message('invalid_input', language))
+                    return
+
+                proc_msg = await update.message.reply_text(get_message('analyzing_followup', language))
+
+                stop_event  = asyncio.Event()
+                typing_task = asyncio.create_task(
+                    keep_typing(context.bot, update.effective_chat.id, stop_event)
+                )
+                try:
+                    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+                    response = analyze_followup_query(
+                        text,
+                        conversation_history=history,
+                        lang_instruction=lang_instruction,
+                    )
+                    save_query(
+                        telegram_id=telegram_id,
+                        query_type='text',
+                        query_content=text,
+                        verdict='followup',
+                        full_response=response,
+                    )
+                    history.append({"role": "user",      "content": text})
+                    history.append({"role": "assistant",  "content": response})
+                    data['history'] = history[-10:]
+                    set_user_state(telegram_id, 'AWAITING_FOLLOWUP', json.dumps(data))
+                    chunks = split_message(response)
+                    for i, chunk in enumerate(chunks):
+                        await context.bot.send_message(chat_id=update.effective_chat.id, text=chunk, parse_mode="Markdown")
+                        if i < len(chunks) - 1:
+                            await asyncio.sleep(0.3)
+                    try:
+                        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=proc_msg.message_id)
+                    except Exception:
+                        pass
+                except AIServiceError as e:
+                    await update.message.reply_text(get_error_message(str(e), language))
+                except Exception:
+                    traceback.print_exc()
+                    await update.message.reply_text(get_message('error', language))
+                finally:
+                    stop_event.set()
+                    typing_task.cancel()
+
+        except Exception as e:
+            print(f"[track] AWAITING_FOLLOWUP error: {e}")
+            traceback.print_exc()
+            await update.message.reply_text(get_message('error', language))
 
     elif conv_state == 'ASK_QUANTITY':
         text = update.message.text.strip() if update.message.text else ""

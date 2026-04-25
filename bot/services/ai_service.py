@@ -297,6 +297,8 @@ def analyze_followup_query(user_question, conversation_history, lang_instruction
 {user_question}
 {lang_instruction}"""
 
+        print(f"[ai_service] analyze_followup_query called: history_len={len(conversation_history)}, query={user_question[:60]}")
+
         response = client.chat.completions.create(
             model=TEXT_MODEL,
             messages=[
